@@ -1,0 +1,15 @@
+{
+  "name": "monitor-de-recursos",
+  "version": "1.0.0",
+  "description": "Monitor de tempo de resposta de apps no Windows 11",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "systeminformation": "^5.21.22"
+  }
+}

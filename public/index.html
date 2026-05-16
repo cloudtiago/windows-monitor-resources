@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitor de Recursos — Windows 11</title>
+  <meta name="description" content="Dashboard em tempo real que monitora o tempo de resposta e performance de todos os apps em execução no Windows 11." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════════
+       HEADER
+  ══════════════════════════════════════════════════════════ -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="url(#logo-grad)" />
+          <path d="M8 16 L16 8 L24 16 L16 24 Z" fill="white" opacity="0.9"/>
+          <circle cx="16" cy="16" r="4" fill="url(#logo-grad)" />
+          <defs>
+            <linearGradient id="logo-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#7c3aed"/>
+              <stop offset="1" stop-color="#06b6d4"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="logo-text">Monitor de Recursos</span>
+        <span class="logo-badge">Windows 11</span>
+      </div>
+    </div>
+    <div class="header-center">
+      <div class="status-dot" id="connection-dot"></div>
+      <span class="status-text" id="connection-text">Conectando...</span>
+    </div>
+    <div class="header-right">
+      <div class="header-stat">
+        <span class="header-stat-label">Última atualização</span>
+        <span class="header-stat-value mono" id="last-update">--:--:--</span>
+      </div>
+      <div class="header-stat">
+        <span class="header-stat-label">Processos</span>
+        <span class="header-stat-value" id="proc-count">—</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SYSTEM KPI CARDS
+  ══════════════════════════════════════════════════════════ -->
+  <section class="kpi-section">
+    <!-- CPU -->
+    <div class="kpi-card" id="kpi-cpu">
+      <div class="kpi-icon cpu-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">CPU Total</span>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="cpu-value">—</span>
+          <span class="kpi-unit">%</span>
+        </div>
+        <div class="kpi-bar-track">
+          <div class="kpi-bar cpu-bar" id="cpu-bar" style="width:0%"></div>
+        </div>
+      </div>
+      <canvas id="cpu-chart" width="100" height="50"></canvas>
+    </div>
+
+    <!-- RAM -->
+    <div class="kpi-card" id="kpi-ram">
+      <div class="kpi-icon ram-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 19v-3a6 6 0 0 1 12 0v3"/><path d="M3 19h18"/><path d="M8 9h.01M12 9h.01M16 9h.01M8 13h.01M12 13h.01M16 13h.01"/><rect x="2" y="5" width="20" height="12" rx="2"/></svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Memória RAM</span>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="ram-value">—</span>
+          <span class="kpi-unit">%</span>
+        </div>
+        <div class="kpi-bar-track">
+          <div class="kpi-bar ram-bar" id="ram-bar" style="width:0%"></div>
+        </div>
+      </div>
+      <canvas id="ram-chart" width="100" height="50"></canvas>
+    </div>
+
+    <!-- Not Responding -->
+    <div class="kpi-card alert-card" id="kpi-alert">
+      <div class="kpi-icon alert-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Sem Resposta</span>
+        <div class="kpi-value-row">
+          <span class="kpi-value alert-value" id="alert-count">0</span>
+          <span class="kpi-unit">apps</span>
+        </div>
+        <span class="kpi-sub" id="alert-names">Todos os apps estão OK</span>
+      </div>
+    </div>
+
+    <!-- Processes -->
+    <div class="kpi-card" id="kpi-procs">
+      <div class="kpi-icon proc-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Total de Processos</span>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="total-procs">—</span>
+          <span class="kpi-unit">ativos</span>
+        </div>
+        <span class="kpi-sub" id="ram-detail">RAM: —</span>
+      </div>
+    </div>
+
+    <!-- Internet Apps -->
+    <div class="kpi-card" id="kpi-net">
+      <div class="kpi-icon net-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Apps na Internet</span>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="net-apps-count">—</span>
+          <span class="kpi-unit">conectados</span>
+        </div>
+        <span class="kpi-sub" id="net-sub">Medindo latências...</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       ALERTS BANNER (hidden when no alerts)
+  ══════════════════════════════════════════════════════════ -->
+  <section class="alerts-banner" id="alerts-banner" style="display:none">
+    <div class="alerts-banner-header">
+      <span class="pulse-dot"></span>
+      <span>Apps sem resposta detectados</span>
+    </div>
+    <div class="alerts-list" id="alerts-list"></div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       TAB NAV
+  ══════════════════════════════════════════════════════════ -->
+  <div class="tab-nav">
+    <button class="tab-btn active" id="tab-processos" data-tab="processos">⚙️ Processos</button>
+    <button class="tab-btn" id="tab-rede" data-tab="rede">🌐 Rede &amp; Latência</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       MAIN CONTENT
+  ══════════════════════════════════════════════════════════ -->
+  <main class="main-content">
+    <!-- ══ TAB: PROCESSOS ══ -->
+    <div id="view-processos" class="tab-view active-view">
+    <section class="table-section">
+      <div class="section-header">
+        <div class="section-title-row">
+          <h2 class="section-title">Processos em Execução</h2>
+          <span class="section-badge" id="visible-count">0</span>
+        </div>
+        <div class="table-controls">
+          <div class="search-box">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="search-input" class="search-input" placeholder="Filtrar por nome..." autocomplete="off" />
+          </div>
+          <div class="filter-buttons">
+            <button class="filter-btn active" id="filter-all" data-filter="all">Todos</button>
+            <button class="filter-btn" id="filter-alert" data-filter="alert">⚠️ Alertas</button>
+            <button class="filter-btn" id="filter-ok" data-filter="ok">✅ OK</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="proc-table" id="proc-table">
+          <thead>
+            <tr>
+              <th class="col-status">Status</th>
+              <th class="col-name sortable" data-sort="name">
+                Processo
+                <svg class="sort-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+              </th>
+              <th class="col-pid sortable" data-sort="pid">PID</th>
+              <th class="col-cpu sortable active-sort" data-sort="cpu">
+                CPU %
+                <svg class="sort-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+              </th>
+              <th class="col-mem sortable" data-sort="mem">
+                RAM (MB)
+                <svg class="sort-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+              </th>
+              <th class="col-pmem sortable" data-sort="pmem">RAM %</th>
+              <th class="col-sparkline">Atividade</th>
+            </tr>
+          </thead>
+          <tbody id="proc-tbody">
+            <tr class="loading-row">
+              <td colspan="7">
+                <div class="loading-spinner">
+                  <div class="spinner"></div>
+                  <span>Conectando ao backend...</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Event Log -->
+    <section class="event-section">
+      <div class="section-header">
+        <div class="section-title-row">
+          <h2 class="section-title">Log de Eventos</h2>
+          <span class="section-badge" id="event-count">0</span>
+        </div>
+        <button class="clear-btn" id="clear-events">Limpar</button>
+      </div>
+      <div class="event-log" id="event-log">
+        <div class="event-empty">Nenhum evento registrado ainda.</div>
+      </div>
+    </section>
+    </div><!-- /view-processos -->
+
+    <!-- ══ TAB: REDE ══ -->
+    <div id="view-rede" class="tab-view" style="display:none">
+      <section class="net-section">
+        <div class="section-header">
+          <div class="section-title-row">
+            <h2 class="section-title">Apps com Conexão de Internet</h2>
+            <span class="section-badge" id="net-visible-count">0</span>
+          </div>
+          <div class="search-box">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="net-search" class="search-input" placeholder="Filtrar app..." autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="net-legend">
+          <span class="lat-chip lat-good">≤ 50ms Ótimo</span>
+          <span class="lat-chip lat-ok">51–150ms Bom</span>
+          <span class="lat-chip lat-warn">151–300ms Lento</span>
+          <span class="lat-chip lat-bad">&gt; 300ms Crítico</span>
+          <span class="lat-chip lat-none">— Medindo</span>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="proc-table net-table">
+            <thead>
+              <tr>
+                <th style="width:32px"></th>
+                <th>Aplicativo</th>
+                <th style="width:70px">PID</th>
+                <th style="width:110px">Melhor Latência</th>
+                <th style="width:80px">Conexões</th>
+                <th style="width:130px">IP Remoto</th>
+                <th style="width:70px">Porta</th>
+              </tr>
+            </thead>
+            <tbody id="net-tbody">
+              <tr class="loading-row"><td colspan="7"><div class="loading-spinner"><div class="spinner"></div><span>Aguardando dados de rede...</span></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div><!-- /view-rede -->
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════════
+       TOAST CONTAINER
+  ══════════════════════════════════════════════════════════ -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
