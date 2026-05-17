@@ -41,6 +41,10 @@
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/leizem/windows-monitor-resources" />
     <Property Id="ARPCONTACT"      Value="https://github.com/leizem" />
     <Property Id="ARPHELPLINK"     Value="https://github.com/leizem/windows-monitor-resources/issues" />
+    <Property Id="ARPPRODUCTICON"  Value="AppIcon" />
+
+    <!-- App icon (used in ARP, shortcuts and taskbar) -->
+    <Icon Id="AppIcon" SourceFile="installer\icon.ico" />
 
     <!-- ─── UI: FeatureTree ─────────────────────────────────────────────── -->
     <!--  Dialogs: Welcome → License → Customize (pasta + features) → Install  -->
@@ -164,7 +168,8 @@
                 Description="Abre o monitor de recursos e rede (http://localhost:3030)"
                 Target="[System64Folder]wscript.exe"
                 Arguments="&quot;[INSTALLFOLDER]launcher.vbs&quot;"
-                WorkingDirectory="INSTALLFOLDER" />
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="AppIcon" />
 
       <!-- Atalho para desinstalar no Menu Iniciar -->
       <Shortcut Id="UninstallShortcut"
@@ -206,7 +211,8 @@
                 Description="Abre o monitor de recursos e rede (http://localhost:3030)"
                 Target="[System64Folder]wscript.exe"
                 Arguments="&quot;[INSTALLFOLDER]launcher.vbs&quot;"
-                WorkingDirectory="INSTALLFOLDER" />
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="AppIcon" />
 
       <!-- Registry KeyPath para este componente -->
       <RegistryValue

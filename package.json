@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Monitor de tempo de resposta de apps no Windows 11",
   "main": "server.js",
+  "bin": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
@@ -12,6 +13,10 @@
   "pkg": {
     "targets": ["node18-win-x64"],
     "scripts": ["server.js"],
+    "assets": [
+      "node_modules/systeminformation/**",
+      "node_modules/socket.io/node_modules/**"
+    ],
     "outputPath": "dist"
   },
   "dependencies": {
