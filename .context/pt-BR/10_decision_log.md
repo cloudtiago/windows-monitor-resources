@@ -137,3 +137,70 @@
 **Risco**: Em produção ou em rede local, qualquer host pode conectar ao WebSocket e receber dados de todos os processos do sistema.
 
 **Ação necessária para produção**: Restringir origin e implementar autenticação no handshake.
+
+---
+
+## ADR-008: Usar pkg para empacotamento standalone
+
+**Data**: 2026-05-17
+
+**Contexto**: Precisávamos distribuir o app sem exigir que o usuário instale Node.js.
+
+**Decisão**: Usar `pkg` (Vercel) para compilar `server.js` + dependências em um único `.exe` Windows (node18-win-x64).
+
+**Alternativas consideradas**:
+- Nexe: menos mantido, problemas com socket.io
+- Node.js SEA (Single Executable App, Node 21+): muito novo, menor compatibilidade
+- Electron: bundla Chromium inteiro (~150 MB), excessivo para um servidor web local
+
+**Consequências**:
+- ✅ Usuário final não precisa instalar Node.js
+- ✅ Exe standalone de ~38 MB
+- ✅ Compatível com WiX MSI como payload
+- ❌ `socket.io` serve seu client JS de dentro do `node_modules` — inacessível no pkg snapshot
+- ❌ `systeminformation` lê seu próprio `package.json` dinamicamente — precisa de assets config
+
+**Solução para o ❌**: Socket.io client carregado do CDN (ver ADR-010). Assets do `systeminformation` declarados em `package.json > pkg.assets`.
+
+---
+
+## ADR-009: Usar Edge --app em vez de Electron para janela nativa
+
+**Data**: 2026-05-17
+
+**Contexto**: Usuário solicitou que o app abrisse em janela própria (sem barra de endereço do browser).
+
+**Decisão**: Abrir o Edge em modo `--app="http://localhost:3030" --start-fullscreen`, via `launcher.vbs`.
+
+**Alternativas consideradas**:
+- **Electron**: janela nativa completa, mas adiciona ~150 MB ao instalador e duplica o runtime Chromium
+- **neutralinojs**: leve (~5 MB), usa WebView do sistema, mas requer refatoração significativa
+- **nw.js**: similar ao Electron, overhead similar
+- **PWA instalada**: requer HTTPS para instalar, complexidade adicional
+
+**Consequências**:
+- ✅ Zero overhead adicional (Edge já está no Windows 10/11)
+- ✅ Janela própria sem chrome do browser, ícone no taskbar
+- ✅ Fullscreen nativo com `--start-fullscreen`
+- ✅ Redimensionamento via `window.resizeTo()` (funciona em --app mode)
+- ❌ Depende do Edge estar instalado (fallback: abre no browser padrão)
+- ❌ Se o usuário fechar o Edge e reabrir manualmente via URL, vê o chrome do browser
+
+---
+
+## ADR-010: Socket.io client via CDN em vez de `/socket.io/socket.io.js`
+
+**Data**: 2026-05-17
+
+**Contexto**: Após empacotar com `pkg`, a aplicação servia o `index.html` corretamente mas o Socket.io nunca conectava — o dashboard ficava preso em "Conectando ao backend...".
+
+**Causa raiz**: O socket.io server serve o client JS em `/socket.io/socket.io.js` lendo arquivos de dentro de `node_modules/socket.io/client-dist/`. No bundle `pkg`, esse diretório fica no virtual snapshot filesystem e não é exposto via HTTP pelo servidor interno do socket.io.
+
+**Decisão**: Substituir `<script src="/socket.io/socket.io.js">` por `<script src="https://cdn.socket.io/4.7.2/socket.io.min.js" crossorigin="anonymous">` no `index.html`.
+
+**Consequências**:
+- ✅ Corrige o problema raiz sem necessidade de adicionar `node_modules/socket.io/**` como asset do pkg
+- ✅ Consistente com a estratégia de CDN já usada para Chart.js e Google Fonts
+- ✅ Versão fixada (4.7.2) — sem surpresas de breaking changes
+- ❌ Requer internet no primeiro uso (CDN)
+- ❌ Versão do client deve ser mantida em sincronia com a versão do server `socket.io` no `package.json`

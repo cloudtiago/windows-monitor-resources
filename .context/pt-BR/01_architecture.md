@@ -5,14 +5,25 @@
 ```
 Monitor de Recursos/
 ├── server.js              # Backend principal (Node.js)
-├── package.json           # Dependências e scripts npm
+├── package.json           # Dependências, scripts npm e config pkg
 ├── package-lock.json      # Lock file
 ├── node_modules/          # Dependências instaladas
 ├── public/                # Arquivos servidos estaticamente
 │   ├── index.html         # Dashboard HTML (SPA single-page)
 │   ├── style.css          # Estilos (Vanilla CSS, dark glassmorphism)
-│   └── app.js             # Frontend JavaScript (Socket.io client)
-└── .context/               # Documentação técnica (este diretório)
+│   └── app.js             # Frontend JavaScript (Socket.io client + window controls)
+├── installer/             # Artefatos do instalador Windows
+│   ├── monitor-recursos.wxs  # Fonte WiX v3 (define features, atalhos, diretórios)
+│   ├── launcher.vbs          # VBScript: inicia servidor + abre Edge --app
+│   ├── license.rtf           # Licença MIT (exibida no instalador)
+│   ├── icon.ico              # Ícone do app (multi-resolução: 16–256px)
+│   └── icon.png              # Ícone fonte PNG (512×512)
+├── scripts/
+│   └── build-msi.ps1      # Pipeline de build: pkg .exe → WiX .msi
+├── dist/                  # Saída do build (não versionado)
+│   ├── monitor-recursos.exe              # Standalone exe (Node.js bundled via pkg)
+│   └── monitor-recursos-v1.0.0-win-x64.msi  # Instalador Windows
+└── .context/              # Documentação técnica (este diretório)
     ├── pt-BR/             # Documentação em Português
     └── en/                # Documentação em Inglês
 ```
@@ -127,5 +138,9 @@ Servidor                        Cliente
 | Detecção de eventos | `server.js` — `collectAndEmit()` + `prevNotResponding` |
 | Armazenamento de estado | `server.js` — `eventLog[]`, `latencyCache`, `prevNotResponding` (in-memory) |
 | Renderização e UI | `public/app.js` — todas as funções `render*()` |
+| Controles de janela | `public/app.js` — fullscreen API, `window.resizeTo()`, F11 |
 | Estilos visuais | `public/style.css` — tokens CSS, componentes, responsividade |
 | Estrutura HTML | `public/index.html` — DOM estático, IDs dos elementos |
+| Empacotamento standalone | `package.json` (pkg config) + `scripts/build-msi.ps1` |
+| Instalador Windows | `installer/monitor-recursos.wxs` — WiX v3 FeatureTree UI |
+| Launcher | `installer/launcher.vbs` — health-polling + Edge --app mode |

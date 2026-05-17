@@ -16,7 +16,7 @@ Aplicação web **em tempo real** que monitora todos os processos em execução 
 - **Log de eventos** de travamentos e recuperações
 - **Notificações em toast** ao detectar novas anomalias
 
-O sistema roda **localmente** como servidor Node.js e é acessado pelo navegador em `http://localhost:3030`.
+O sistema roda **localmente** como servidor Node.js e é acessado pelo **Microsoft Edge em modo `--app`** (janela própria, sem barra de endereço, tela cheia), ou pelo navegador em `http://localhost:3030` quando em modo desenvolvimento.
 
 ---
 
@@ -56,19 +56,24 @@ O sistema roda **localmente** como servidor Node.js e é acessado pelo navegador
 |---|---|---|---|
 | Servidor HTTP | Express | ^4.18.2 | Serve arquivos estáticos + API REST |
 | WebSocket | Socket.io | ^4.7.2 | Push de métricas a cada 2.5s |
+| Socket.io Client | Socket.io CDN | 4.7.2 | Carregado do CDN (necessidade do pkg bundle) |
 | Métricas do sistema | systeminformation | ^5.21.22 | CPU, RAM, lista de processos |
 | Responsividade de apps | PowerShell nativo | Windows built-in | Única forma confiável de checar `.Responding` |
 | Conexões TCP | PowerShell nativo | Windows built-in | `Get-NetTCPConnection` com OwningProcess |
 | Latência de rede | Node.js `net` (built-in) | Node built-in | TCP connect timing sem dependências externas |
 | Gráficos | Chart.js | 4.4.0 (CDN) | Sparklines de CPU/RAM |
 | Tipografia | Inter + JetBrains Mono | Google Fonts (CDN) | Design premium |
+| Empacotamento | pkg | ^5.8.1 | Compila Node.js em .exe standalone |
+| Instalador | WiX Toolset v3 | 3.11.2 | Gera .msi com UI FeatureTree (atalho Desktop opcional) |
+| Janela desktop | Microsoft Edge --app | Pré-instalado Win10/11 | Janela própria sem chrome do browser |
 
 ---
 
 ## Requisitos de ambiente
 
 - **Sistema Operacional**: Windows 10 / Windows 11 (obrigatório — usa APIs Windows-specific)
-- **Node.js**: >= 16.x
+- **Node.js**: >= 16.x (apenas em modo desenvolvimento; não necessário com o instalador .msi)
 - **PowerShell**: >= 5.1 (já incluso no Windows 11)
+- **Microsoft Edge**: qualquer versão moderna (já incluso no Windows 10/11) — usado para abrir a UI em modo `--app`
 - **Permissões**: Sem necessidade de admin para leitura básica; `Get-NetTCPConnection` pode retornar dados parciais sem privilégios elevados
-- **Internet**: Necessária apenas para carregar Chart.js e fontes Google do CDN no primeiro acesso
+- **Internet**: Necessária para carregar Socket.io, Chart.js e fontes Google do CDN
