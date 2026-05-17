@@ -51,11 +51,10 @@ Next
 
 ' ── Abre a janela ────────────────────────────────────────────────────────────
 If edgePath <> "" Then
-    ' Edge --app: janela propria, sem barra de endereco, atalho no taskbar
+    ' Edge --app: janela propria, sem barra de endereco, abre em tela cheia
     WshShell.Run Chr(34) & edgePath & Chr(34) & _
         " --app=""http://localhost:3030""" & _
-        " --window-size=1440,900" & _
-        " --window-position=100,60", 1, False
+        " --start-fullscreen", 1, False
 Else
     ' Fallback: abre no navegador padrao
     WshShell.Run "http://localhost:3030", 1, False
