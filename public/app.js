@@ -466,3 +466,44 @@ function escHtml(str) {
     .replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;');
 }
+
+// ── Window Controls ────────────────────────────────────────────────────────
+const btnFullscreen = $$('btn-fullscreen');
+const btnCompact    = $$('btn-compact');
+const btnNormal     = $$('btn-normal');
+const fsIconEnter   = $$('fs-icon-enter');
+const fsIconExit    = $$('fs-icon-exit');
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const isFs = !!document.fullscreenElement;
+  fsIconEnter.style.display = isFs ? 'none' : '';
+  fsIconExit.style.display  = isFs ? ''     : 'none';
+  btnFullscreen.classList.toggle('active', isFs);
+});
+
+btnFullscreen.addEventListener('click', toggleFullscreen);
+
+// F11 → toggle fullscreen
+document.addEventListener('keydown', e => {
+  if (e.key === 'F11') { e.preventDefault(); toggleFullscreen(); }
+});
+
+// Compact mode: 800 × 600
+btnCompact.addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  window.resizeTo(800, 600);
+});
+
+// Normal mode: 1440 × 900
+btnNormal.addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  window.resizeTo(1440, 900);
+});
