@@ -12,7 +12,7 @@ Monitor de Recursos/
 │   ├── index.html         # Dashboard HTML (single-page app)
 │   ├── style.css          # Styles (Vanilla CSS, dark glassmorphism)
 │   └── app.js             # Frontend JavaScript (Socket.io client)
-└── .agents/               # Technical documentation (this directory)
+└── .context/               # Technical documentation (this directory)
     ├── pt-BR/             # Portuguese documentation
     └── en/                # English documentation
 ```

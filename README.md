@@ -6,7 +6,7 @@
 [![Windows](https://img.shields.io/badge/OS-Windows%2010%2F11-blue)](https://microsoft.com/windows)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-![Dashboard Screenshot](https://raw.githubusercontent.com/leizem/windows-monitor-resources/main/.agents/screenshot.png)
+![Dashboard Screenshot](https://raw.githubusercontent.com/leizem/windows-monitor-resources/main/.context/screenshot.png)
 
 ---
 
@@ -96,7 +96,7 @@ windows-monitor-resources/
 │   ├── index.html         # Dashboard
 │   ├── style.css          # Styles
 │   └── app.js             # Frontend logic
-└── .agents/               # Technical documentation
+└── .context/               # Technical documentation
     ├── pt-BR/             # Portuguese (BR) docs
     │   ├── 00_system_overview.md
     │   ├── 01_architecture.md
@@ -146,7 +146,7 @@ All configuration is hardcoded in `server.js`. Key constants:
 - **No authentication** — do not expose to the internet without adding auth
 - **TCP latency only** — UDP and QUIC (HTTP/3) connections are not measurable
 
-See [`.agents/en/09_known_limitations.md`](.agents/en/09_known_limitations.md) for the full list.
+See [`.context/en/09_known_limitations.md`](.context/en/09_known_limitations.md) for the full list.
 
 ---
 
@@ -165,8 +165,8 @@ pm2 startup && pm2 save
 
 Complete technical documentation (architecture, data flow, API contracts, extension points, decision log) is available in:
 
-- **Portuguese**: [`.agents/pt-BR/`](.agents/pt-BR/)
-- **English**: [`.agents/en/`](.agents/en/)
+- **Portuguese**: [`.context/pt-BR/`](.context/pt-BR/)
+- **English**: [`.context/en/`](.context/en/)
 
 ---
 
