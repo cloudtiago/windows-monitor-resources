@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Monitor de Recursos — WiX v3 Installer Source
+  ─────────────────────────────────────────────────────────────────────────────
+  UI:      WixUI_FeatureTree
+           • Welcome → License → Customize (escolha de pasta + features) → Install
+  Features:
+    ┌─ Aplicação Principal  (obrigatória, com botão Procurar para pasta)
+    └─ Atalho no Desktop    (opcional — usuário marca/desmarca)
+  Output:  dist\monitor-recursos-v1.0.0-win-x64.msi
+  Build:   npm run build:msi
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!--  Product                                                                 -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <Product
+    Id="*"
+    Name="Monitor de Recursos"
+    Language="1046"
+    Version="1.0.0.0"
+    Manufacturer="Vitai QI140"
+    UpgradeCode="{A8B3D5F2-1C4E-4A7B-9E6D-2F8C3A5B7D9E}">
+
+    <Package
+      InstallerVersion="500"
+      Compressed="yes"
+      InstallScope="perMachine"
+      Platform="x64"
+      Description="Monitor de recursos e rede em tempo real para Windows 11"
+      Comments="Dashboard web local — http://localhost:3030" />
+
+    <!-- Prevent downgrades -->
+    <MajorUpgrade
+      DowngradeErrorMessage="Uma versão mais recente do Monitor de Recursos já está instalada." />
+
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- Add/Remove Programs -->
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/leizem/windows-monitor-resources" />
+    <Property Id="ARPCONTACT"      Value="https://github.com/leizem" />
+    <Property Id="ARPHELPLINK"     Value="https://github.com/leizem/windows-monitor-resources/issues" />
+
+    <!-- ─── UI: FeatureTree ─────────────────────────────────────────────── -->
+    <!--  Dialogs: Welcome → License → Customize (pasta + features) → Install  -->
+    <UIRef Id="WixUI_FeatureTree" />
+    <WixVariable Id="WixUILicenseRtf" Value="installer\license.rtf" />
+
+    <!-- ─── Features ───────────────────────────────────────────────────── -->
+
+    <!--
+      Feature 1: Core Application (OBRIGATÓRIA)
+      ConfigurableDirectory="INSTALLFOLDER" → ativa o botão "Procurar"
+      no diálogo de customização, permitindo escolher qualquer pasta.
+    -->
+    <Feature
+      Id="CoreFeature"
+      Title="Aplicação Principal"
+      Description="Servidor Node.js e interface web do Monitor de Recursos (obrigatório)"
+      Level="1"
+      Absent="disallow"
+      ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentGroupRef Id="AppFiles"    />
+      <ComponentGroupRef Id="PublicFiles" />
+      <ComponentRef      Id="StartMenuComp" />
+    </Feature>
+
+    <!--
+      Feature 2: Desktop Shortcut (OPCIONAL — pode ser desmarcada)
+      Level="1" → ativada por padrão; usuário pode desmarcar no installer.
+    -->
+    <Feature
+      Id="DesktopShortcutFeature"
+      Title="Atalho na Área de Trabalho"
+      Description="Cria um atalho no Desktop para iniciar o Monitor de Recursos com um clique"
+      Level="1">
+      <ComponentRef Id="DesktopShortcutComp" />
+    </Feature>
+
+  </Product>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!--  Directory tree                                                          -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <Fragment>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+
+      <!-- Pasta de instalação — padrão: %ProgramFiles%\Monitor de Recursos\  -->
+      <!-- O usuário pode alterar via botão "Procurar" na tela de customização -->
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="Monitor de Recursos">
+          <!-- public\ para servir o dashboard web -->
+          <Directory Id="PUBLICFOLDER" Name="public" />
+        </Directory>
+      </Directory>
+
+      <!-- Grupo no Menu Iniciar -->
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="AppMenuFolder" Name="Monitor de Recursos" />
+      </Directory>
+
+      <!-- Área de Trabalho -->
+      <Directory Id="DesktopFolder" Name="Desktop" />
+
+    </Directory>
+  </Fragment>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!--  App files (executável + launcher)                                       -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <Fragment>
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+
+      <!-- Standalone Node.js .exe gerado pelo pkg -->
+      <Component Id="MainExeComp" Guid="*">
+        <File Id="MonitorExe"
+              Source="dist\monitor-recursos.exe"
+              KeyPath="yes" />
+      </Component>
+
+      <!-- VBScript: inicia o servidor e abre o browser -->
+      <Component Id="LauncherComp" Guid="*">
+        <File Id="LauncherVbs"
+              Source="installer\launcher.vbs"
+              KeyPath="yes" />
+      </Component>
+
+    </ComponentGroup>
+  </Fragment>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!--  public\ folder (HTML, CSS, JS do dashboard)                            -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <Fragment>
+    <ComponentGroup Id="PublicFiles" Directory="PUBLICFOLDER">
+
+      <Component Id="IndexHtmlComp" Guid="*">
+        <File Id="IndexHtml" Source="public\index.html" KeyPath="yes" />
+      </Component>
+
+      <Component Id="StyleCssComp" Guid="*">
+        <File Id="StyleCss" Source="public\style.css" KeyPath="yes" />
+      </Component>
+
+      <Component Id="AppJsComp" Guid="*">
+        <File Id="AppJs" Source="public\app.js" KeyPath="yes" />
+      </Component>
+
+    </ComponentGroup>
+  </Fragment>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!--  Start Menu shortcuts (obrigatório — parte do CoreFeature)               -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <Fragment>
+
+    <Component Id="StartMenuComp" Directory="INSTALLFOLDER" Guid="*">
+
+      <!-- Atalho no Menu Iniciar -->
+      <Shortcut Id="StartMenuShortcut"
+                Directory="AppMenuFolder"
+                Name="Monitor de Recursos"
+                Description="Abre o monitor de recursos e rede (http://localhost:3030)"
+                Target="[System64Folder]wscript.exe"
+                Arguments="&quot;[INSTALLFOLDER]launcher.vbs&quot;"
+                WorkingDirectory="INSTALLFOLDER" />
+
+      <!-- Atalho para desinstalar no Menu Iniciar -->
+      <Shortcut Id="UninstallShortcut"
+                Directory="AppMenuFolder"
+                Name="Desinstalar Monitor de Recursos"
+                Target="[System64Folder]msiexec.exe"
+                Arguments="/x [ProductCode]" />
+
+      <!-- Remove a pasta do Menu Iniciar ao desinstalar -->
+      <RemoveFolder Id="RemoveAppMenuFolder"
+                    Directory="AppMenuFolder"
+                    On="uninstall" />
+
+      <!-- Registry KeyPath exigido pelo WiX para este componente -->
+      <RegistryValue
+        Root="HKCU"
+        Key="Software\VitaiQI140\MonitorRecursos"
+        Name="StartMenu"
+        Type="integer"
+        Value="1"
+        KeyPath="yes" />
+
+    </Component>
+
+  </Fragment>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!--  Desktop shortcut (OPCIONAL — parte do DesktopShortcutFeature)           -->
+  <!--  O usuário pode desmarcar esta feature na tela de customização           -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <Fragment>
+
+    <Component Id="DesktopShortcutComp" Directory="INSTALLFOLDER" Guid="*">
+
+      <!-- Atalho na Área de Trabalho -->
+      <Shortcut Id="DesktopShortcut"
+                Directory="DesktopFolder"
+                Name="Monitor de Recursos"
+                Description="Abre o monitor de recursos e rede (http://localhost:3030)"
+                Target="[System64Folder]wscript.exe"
+                Arguments="&quot;[INSTALLFOLDER]launcher.vbs&quot;"
+                WorkingDirectory="INSTALLFOLDER" />
+
+      <!-- Registry KeyPath para este componente -->
+      <RegistryValue
+        Root="HKCU"
+        Key="Software\VitaiQI140\MonitorRecursos"
+        Name="Desktop"
+        Type="integer"
+        Value="1"
+        KeyPath="yes" />
+
+    </Component>
+
+  </Fragment>
+
+</Wix>

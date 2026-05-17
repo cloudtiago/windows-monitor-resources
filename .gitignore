@@ -2,3 +2,13 @@ node_modules/
 .env
 *.log
 npm-debug.log*
+
+# Build outputs
+dist/
+
+# WiX toolchain (downloaded at build time, not committed)
+tools/
+
+# WiX intermediate files
+*.wixobj
+*.wixpdb

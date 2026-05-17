@@ -11,7 +11,11 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
 const PORT = 3030;
-app.use(express.static(path.join(__dirname, 'public')));
+// When packaged with pkg, public/ must be resolved relative to the .exe location
+const publicPath = process.pkg
+  ? path.join(path.dirname(process.execPath), 'public')
+  : path.join(__dirname, 'public');
+app.use(express.static(publicPath));
 
 // ─── In-memory event log ──────────────────────────────────────────────────────
 const eventLog = [];
