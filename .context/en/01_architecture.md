@@ -33,6 +33,7 @@ The backend is a single Node.js file with well-defined responsibilities:
 | `measureTcpLatency(host, port)` | Measures TCP connect time in ms using native `net.Socket` |
 | `getLatencies(connections)` | Orchestrates batch measurements (max 15 parallel), respects 15s cache |
 | `getSiProcesses()` | Async wrapper for `si.processes()`, `si.currentLoad()`, `si.mem()` |
+| `si.networkStats()` | Native `systeminformation` function used to obtain transfer rates (rx/tx bytes) |
 | `buildNetworkData(connections, processList)` | Groups connections by PID, calculates best latency per process |
 | `collectAndEmit()` | Main function: collects everything in parallel and emits `metrics` via Socket.io |
 | `poll()` | Re-entrancy guard + calls `collectAndEmit()` every 2.5s |
@@ -46,7 +47,8 @@ poll()
 collectAndEmit()
   ├── getSiProcesses()      ─── parallel ───▶  { procs, load, mem }
   ├── getPowerShellResponding()              ▶  [{Name, Id, Responding}]
-  └── getTcpConnections()                   ▶  [{LocalPort, RemoteAddress, RemotePort, OwningProcess}]
+  ├── getTcpConnections()                   ▶  [{LocalPort, RemoteAddress, RemotePort, OwningProcess}]
+  └── si.networkStats()                     ▶  [{rx_sec, tx_sec, operstate}] (Filtered by 'up')
   ↓
   Merge: processList ← procs + respondingMap
   ↓
@@ -71,7 +73,7 @@ The frontend is a framework-free SPA organized into functional modules:
 const state = {
   processes: [],        // Process list from last emit
   networkData: [],      // Apps with network connections
-  system: {},           // CPU%, RAM%, totals
+  system: {},           // CPU%, RAM%, totals, rxSec, txSec
   events: [],           // Event log (mirror of backend)
   sortKey: 'cpu',       // Active sort column
   sortDir: -1,          // -1=desc, 1=asc
@@ -80,6 +82,7 @@ const state = {
   netSearch: '',        // Network tab search text
   cpuHistory: [],       // 30-reading history for global CPU
   ramHistory: [],       // 30-reading history for global RAM
+  transferHistory: [],  // 30-reading history for global Network Transfer rate
   maxHistory: 30,       // Max size of history arrays
   procCpuHistory: {},   // Map pid→[values] for per-process sparklines
   expandedPids: Set(),  // PIDs with expanded connection details

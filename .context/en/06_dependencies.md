@@ -9,7 +9,7 @@ Serves static files from `public/` and two REST endpoints. Can be replaced by `f
 Real-time bidirectional WebSocket. Used for server → client broadcast of `metrics` every 2.5s. Can be replaced by `ws` + SSE with medium refactor effort.
 
 ### `systeminformation` ^5.21.22
-Cross-platform OS metrics. Functions used: `si.processes()`, `si.currentLoad()`, `si.mem()`.
+Cross-platform OS metrics. Functions used: `si.processes()`, `si.currentLoad()`, `si.mem()`, `si.networkStats()`.
 Docs: https://systeminformation.io/
 
 ---
@@ -18,7 +18,7 @@ Docs: https://systeminformation.io/
 
 ### Chart.js 4.4.0
 `https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js`
-Used only for `'line'` type sparkline charts on CPU/RAM KPI cards.
+Used for `'line'` type sparkline charts on CPU/RAM/Network KPI cards.
 
 To host locally:
 ```bash

@@ -1,4 +1,8 @@
-/* global app.js — Monitor de Recursos Windows 11 */
+/**
+ * Monitor de Recursos — Frontend v1.2.0
+ * Copyright © HT Technology® 2026. Todos os direitos reservados.
+ * https://github.com/leizem/windows-monitor-resources
+ */
 
 // ── State ──────────────────────────────────────────────────────────────────
 const state = {
@@ -13,6 +17,7 @@ const state = {
   netSearch: '',
   cpuHistory: [],
   ramHistory: [],
+  transferHistory: [],
   maxHistory: 30,
   procCpuHistory: {},
   expandedPids: new Set(),
@@ -45,6 +50,17 @@ const netAppsCount= $$('net-apps-count');
 const netSub      = $$('net-sub');
 const netTbody    = $$('net-tbody');
 const netVisCount = $$('net-visible-count');
+const netSpeedVal = $$('net-speed-val');
+const netSpeedDetail = $$('net-speed-detail');
+const netDlSpeed   = $$('net-dl-speed');
+const netUlSpeed   = $$('net-ul-speed');
+const tempValue    = $$('temp-value');
+const tempSub      = $$('temp-sub');
+
+// Helper to get CSS theme colors dynamically
+function getThemeColor(varName) {
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
 
 // ── Charts ─────────────────────────────────────────────────────────────────
 function makeSparkline(canvasId, color) {
@@ -77,6 +93,19 @@ function makeSparkline(canvasId, color) {
 
 const cpuChart = makeSparkline('cpu-chart', '#9f67ff');
 const ramChart = makeSparkline('ram-chart', '#22d3ee');
+const transferChart = makeSparkline('transfer-chart', '#f59e0b');
+
+// Speed formatting helper
+function formatSpeed(bytesPerSec) {
+  if (bytesPerSec === null || bytesPerSec === undefined || isNaN(bytesPerSec)) return '0 B/s';
+  if (bytesPerSec < 1024) return `${Math.round(bytesPerSec)} B/s`;
+  const kb = bytesPerSec / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB/s`;
+  const mb = kb / 1024;
+  if (mb < 1024) return `${mb.toFixed(1)} MB/s`;
+  const gb = mb / 1024;
+  return `${gb.toFixed(1)} GB/s`;
+}
 
 function pushHistory(arr, value) {
   arr.push(value);
@@ -122,7 +151,7 @@ socket.on('metrics', (data) => {
 
 // ── KPI Update ─────────────────────────────────────────────────────────────
 function updateKPIs() {
-  const { cpuLoad, memPercent, memTotal, memActive } = state.system;
+  const { cpuLoad, memPercent, memTotal, memActive, rxSec, txSec, cpuTemp } = state.system;
 
   // CPU
   cpuValue.textContent = (cpuLoad ?? 0).toFixed(1);
@@ -135,6 +164,26 @@ function updateKPIs() {
   ramBar.style.width   = Math.min(memPercent ?? 0, 100) + '%';
   pushHistory(state.ramHistory, memPercent ?? 0);
   updateChart(ramChart, state.ramHistory);
+
+  // CPU Temperature
+  updateTemperatureKPI(cpuTemp);
+
+  // Network Speed (Transfer Rate)
+  const rx = rxSec ?? 0;
+  const tx = txSec ?? 0;
+  const totalSpeed = rx + tx;
+
+  netSpeedVal.textContent = formatSpeed(totalSpeed);
+  netSpeedDetail.textContent = `⬇️ ${formatSpeed(rx)}  ⬆️ ${formatSpeed(tx)}`;
+  
+  netDlSpeed.textContent = formatSpeed(rx);
+  netUlSpeed.textContent = formatSpeed(tx);
+
+  pushHistory(state.transferHistory, totalSpeed);
+  // Scale the history to [0, 100] for sparkline visualization
+  const maxInHistory = Math.max(...state.transferHistory, 1024);
+  const scaledHistory = state.transferHistory.map(v => (v / maxInHistory) * 100);
+  updateChart(transferChart, scaledHistory);
 
   const totalGB  = ((memTotal ?? 0) / 1073741824).toFixed(1);
   const activeGB = ((memActive ?? 0) / 1073741824).toFixed(1);
@@ -171,6 +220,31 @@ function updateKPIs() {
     }
   } else {
     netSub.textContent = 'Sem conexões externas';
+  }
+}
+
+// ── CPU Temperature KPI ────────────────────────────────────────────────────
+function updateTemperatureKPI(temp) {
+  if (temp === null || temp === undefined) {
+    tempValue.textContent = '—';
+    tempSub.textContent = 'Sensor não disponível';
+    return;
+  }
+  tempValue.textContent = temp.toFixed(1);
+  const kpiCard = $$('kpi-temp');
+  // Color coding by temperature
+  if (temp >= 90) {
+    tempSub.textContent = '🔴 Crítico — risco de throttling';
+    kpiCard.style.borderColor = 'rgba(239,68,68,0.4)';
+  } else if (temp >= 75) {
+    tempSub.textContent = '🟡 Quente — monitorar';
+    kpiCard.style.borderColor = 'rgba(245,158,11,0.3)';
+  } else if (temp >= 50) {
+    tempSub.textContent = '🟢 Normal';
+    kpiCard.style.borderColor = '';
+  } else {
+    tempSub.textContent = '🔵 Frio — ótimo';
+    kpiCard.style.borderColor = '';
   }
 }
 
@@ -273,12 +347,53 @@ function renderTable() {
       const y = h - (v / max) * h;
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     });
-    const col = p.responding === false ? '#ef4444' : p.pcpu >= 20 ? '#f59e0b' : '#7c3aed';
+    const col = p.responding === false 
+      ? (getThemeColor('--red-l') || '#ef4444') 
+      : p.pcpu >= 20 
+        ? (getThemeColor('--yellow') || '#f59e0b') 
+        : (getThemeColor('--purple') || '#7c3aed');
     ctx.strokeStyle = col;
     ctx.lineWidth = 1.5;
     ctx.stroke();
   });
 }
+
+// ── Export CSV ─────────────────────────────────────────────────────────────
+function exportProcessesCSV() {
+  const list = filteredProcesses();
+  if (!list.length) {
+    toast('Nenhum processo para exportar', 'info');
+    return;
+  }
+
+  const header = ['Status', 'Processo', 'PID', 'CPU (%)', 'RAM (MB)', 'RAM (%)'];
+  const rows = list.map(p => {
+    const status = p.responding === false ? 'Travado' : p.responding === true ? 'OK' : 'Background';
+    const memMB  = (p.mem / 1024).toFixed(1);
+    return [status, p.name, p.pid, p.pcpu.toFixed(2), memMB, p.pmem.toFixed(2)];
+  });
+
+  const csvContent = [header, ...rows]
+    .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+    .join('\r\n');
+
+  // BOM for Excel UTF-8 compatibility
+  const bom = '\uFEFF';
+  const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  a.href = url;
+  a.download = `processos-${ts}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  toast(`✓ CSV exportado — ${list.length} processos`, 'success');
+}
+
+$$('btn-export-csv').addEventListener('click', exportProcessesCSV);
 
 // ── Event Log ──────────────────────────────────────────────────────────────
 function renderEvents() {
@@ -467,6 +582,14 @@ function escHtml(str) {
     .replace(/"/g,'&quot;');
 }
 
+// ── Keyboard Shortcuts ──────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  // F11 → fullscreen
+  if (e.key === 'F11') { e.preventDefault(); toggleFullscreen(); }
+  // Ctrl+E → Export CSV
+  if ((e.ctrlKey || e.metaKey) && e.key === 'e') { e.preventDefault(); exportProcessesCSV(); }
+});
+
 // ── Window Controls ────────────────────────────────────────────────────────
 const btnFullscreen = $$('btn-fullscreen');
 const btnCompact    = $$('btn-compact');
@@ -491,11 +614,6 @@ document.addEventListener('fullscreenchange', () => {
 
 btnFullscreen.addEventListener('click', toggleFullscreen);
 
-// F11 → toggle fullscreen
-document.addEventListener('keydown', e => {
-  if (e.key === 'F11') { e.preventDefault(); toggleFullscreen(); }
-});
-
 // Compact mode: 800 × 600
 btnCompact.addEventListener('click', () => {
   if (document.fullscreenElement) document.exitFullscreen();
@@ -507,3 +625,60 @@ btnNormal.addEventListener('click', () => {
   if (document.fullscreenElement) document.exitFullscreen();
   window.resizeTo(1440, 900);
 });
+
+// ── Theme Switch & Dynamic Chart Coloring ───────────────────────────────────
+function updateChartsTheme() {
+  setTimeout(() => {
+    const purple = getThemeColor('--purple-l') || '#9f67ff';
+    const cyan = getThemeColor('--cyan-l') || '#22d3ee';
+    const yellow = getThemeColor('--yellow') || '#f59e0b';
+
+    if (cpuChart && cpuChart.data) {
+      cpuChart.data.datasets[0].borderColor = purple;
+      cpuChart.data.datasets[0].backgroundColor = purple + '18';
+      cpuChart.update('none');
+    }
+    if (ramChart && ramChart.data) {
+      ramChart.data.datasets[0].borderColor = cyan;
+      ramChart.data.datasets[0].backgroundColor = cyan + '18';
+      ramChart.update('none');
+    }
+    if (transferChart && transferChart.data) {
+      transferChart.data.datasets[0].borderColor = yellow;
+      transferChart.data.datasets[0].backgroundColor = yellow + '18';
+      transferChart.update('none');
+    }
+  }, 50);
+}
+
+const themeToggleBtn = $$('theme-toggle');
+const sunIcon = themeToggleBtn.querySelector('.theme-icon-sun');
+const moonIcon = themeToggleBtn.querySelector('.theme-icon-moon');
+
+function getPreferredTheme() {
+  const saved = localStorage.getItem('theme');
+  return saved || 'dark';
+}
+
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+  
+  if (theme === 'light') {
+    sunIcon.style.display = 'none';
+    moonIcon.style.display = '';
+  } else {
+    sunIcon.style.display = '';
+    moonIcon.style.display = 'none';
+  }
+  
+  updateChartsTheme();
+}
+
+themeToggleBtn.addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  setTheme(current === 'dark' ? 'light' : 'dark');
+});
+
+// Run theme setup on load
+setTheme(getPreferredTheme());

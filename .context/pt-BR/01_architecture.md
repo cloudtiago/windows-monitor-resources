@@ -44,6 +44,7 @@ O backend é um único arquivo Node.js com responsabilidades bem definidas:
 | `measureTcpLatency(host, port)` | Mede tempo de TCP connect em ms usando `net.Socket` nativo |
 | `getLatencies(connections)` | Orquestra medições em lote (15 paralelas máx), respeita cache de 15s |
 | `getSiProcesses()` | Wrapper async de `si.processes()`, `si.currentLoad()`, `si.mem()` |
+| `si.networkStats()` | Função nativa da biblioteca `systeminformation` usada para obter taxas de transferência (rx/tx bytes) |
 | `buildNetworkData(connections, processList)` | Agrupa conexões por PID, calcula melhor latência por processo |
 | `collectAndEmit()` | Função principal: coleta tudo em paralelo e emite evento `metrics` via Socket.io |
 | `poll()` | Guard de re-entrância + chama `collectAndEmit()` a cada 2.5s |
@@ -57,7 +58,8 @@ poll()
 collectAndEmit()
   ├── getSiProcesses()      ─── paralelo ───▶  { procs, load, mem }
   ├── getPowerShellResponding()               ▶  [{Name, Id, Responding}]
-  └── getTcpConnections()                    ▶  [{LocalPort, RemoteAddress, RemotePort, OwningProcess}]
+  ├── getTcpConnections()                    ▶  [{LocalPort, RemoteAddress, RemotePort, OwningProcess}]
+  └── si.networkStats()                      ▶  [{rx_sec, tx_sec, operstate}] (Filtrado por 'up')
   ↓
   Merge: processList ← procs + respondingMap
   ↓
@@ -82,7 +84,7 @@ O frontend é um SPA (Single Page Application) sem framework, organizado em mód
 const state = {
   processes: [],        // Lista de processos do último emit
   networkData: [],      // Apps com conexões de rede
-  system: {},           // CPU%, RAM%, totais
+  system: {},           // CPU%, RAM%, totais, rxSec, txSec
   events: [],           // Log de eventos (espelho do backend)
   sortKey: 'cpu',       // Coluna de ordenação ativa
   sortDir: -1,          // -1=desc, 1=asc
@@ -91,6 +93,7 @@ const state = {
   netSearch: '',        // Texto de busca da aba rede
   cpuHistory: [],       // Histórico de 30 leituras de CPU global
   ramHistory: [],       // Histórico de 30 leituras de RAM global
+  transferHistory: [],  // Histórico de 30 leituras de Taxa de Transferência global
   maxHistory: 30,       // Tamanho máximo dos arrays de histórico
   procCpuHistory: {},   // Map pid→[valores] para sparklines por processo
   expandedPids: Set(),  // PIDs com detalhe de conexão expandido

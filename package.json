@@ -1,9 +1,12 @@
 {
   "name": "monitor-de-recursos",
-  "version": "1.0.0",
-  "description": "Monitor de tempo de resposta de apps no Windows 11",
+  "version": "1.2.0",
+  "description": "Monitor de tempo de resposta e performance de apps no Windows — HT Technology",
   "main": "server.js",
   "bin": "server.js",
+  "author": "HT Technology <https://github.com/leizem>",
+  "license": "MIT",
+  "homepage": "https://github.com/leizem/windows-monitor-resources",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
