@@ -1,6 +1,7 @@
 #Requires -Version 5.1
 # =============================================================================
-#  Monitor de Recursos - Build MSI Installer
+#  Monitor de Recursos - Build MSI Installer v1.2.0
+#  Copyright © HT Technology® 2026. Todos os direitos reservados.
 #  Gera o executavel standalone (pkg) e o instalador .msi (WiX v3)
 #  Uso: npm run build:msi
 #       powershell -ExecutionPolicy Bypass -File scripts/build-msi.ps1
@@ -14,9 +15,10 @@ $DistDir      = Join-Path $ProjectRoot "dist"
 $ToolsWixDir  = Join-Path $ProjectRoot "tools\wix"
 $InstallerDir = Join-Path $ProjectRoot "installer"
 
+$AppVersion = "1.2.0"
 $ExeName    = "monitor-recursos.exe"
 $ExePath    = Join-Path $DistDir $ExeName
-$MsiName    = "monitor-recursos-v1.0.0-win-x64.msi"
+$MsiName    = "monitor-recursos-v$AppVersion-win-x64.msi"
 $MsiPath    = Join-Path $DistDir $MsiName
 $WxsPath    = Join-Path $InstallerDir "monitor-recursos.wxs"
 $WixObjPath = Join-Path $DistDir "monitor-recursos.wixobj"
@@ -29,15 +31,26 @@ $LightExe   = Join-Path $ToolsWixDir "light.exe"
 # --- Banner ------------------------------------------------------------------
 Write-Host ""
 Write-Host "  ============================================================" -ForegroundColor Cyan
-Write-Host "    Monitor de Recursos - Build MSI v1.0.0                   " -ForegroundColor Cyan
+Write-Host "    Monitor de Recursos - Build MSI v$AppVersion               " -ForegroundColor Cyan
+Write-Host "    Copyright (c) HT Technology 2026                        " -ForegroundColor Cyan
 Write-Host "  ============================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# --- Step 1: Prepare directories --------------------------------------------
-Write-Host "[1/5] Preparando diretorios..." -ForegroundColor Yellow
+# --- Step 1: Prepare directories + clean old artifacts ----------------------
+Write-Host "[1/5] Preparando diretorios e limpando build anterior..." -ForegroundColor Yellow
 New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $ProjectRoot "tools") | Out-Null
-Write-Host "      OK - dist/ e tools/ prontos" -ForegroundColor Green
+
+# Remove stale MSI artifacts from previous builds to avoid confusion
+Get-ChildItem -Path $DistDir -Filter "monitor-recursos-v*.msi" -ErrorAction SilentlyContinue |
+  Where-Object { $_.Name -ne $MsiName } |
+  ForEach-Object {
+    Write-Host "      Removendo MSI antigo: $($_.Name)" -ForegroundColor Gray
+    Remove-Item $_.FullName -Force
+  }
+if (Test-Path $WixObjPath) { Remove-Item $WixObjPath -Force }
+
+Write-Host "      OK - diretorios prontos" -ForegroundColor Green
 
 # --- Step 2: Build standalone .exe with pkg ---------------------------------
 Write-Host "[2/5] Empacotando com pkg (Node.js standalone .exe)..." -ForegroundColor Yellow
@@ -82,7 +95,7 @@ Write-Host "      OK - .wixobj gerado" -ForegroundColor Green
 # --- Step 5: Link and create .msi -------------------------------------------
 Write-Host "[5/5] Gerando instalador .msi (light.exe)..." -ForegroundColor Yellow
 
-& $LightExe -out "$MsiPath" "$WixObjPath" -ext WixUIExtension -nologo
+& $LightExe -out "$MsiPath" "$WixObjPath" -ext WixUIExtension -nologo -sice:ICE61
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  ERRO: Falha ao criar o .msi (light.exe)." -ForegroundColor Red
@@ -101,7 +114,8 @@ Write-Host "  Executavel  : dist\$ExeName  ($ExeMB MB)" -ForegroundColor White
 Write-Host "  Instalador  : dist\$MsiName  ($MsiMB MB)" -ForegroundColor White
 Write-Host ""
 Write-Host "  --- Proximos passos -------------------------------------------" -ForegroundColor DarkCyan
-Write-Host "  1. Teste o instalador: msiexec /i dist\$MsiName" -ForegroundColor Cyan
-Write-Host "  2. Faca upload do .msi no GitHub Release v1.0.0:" -ForegroundColor Cyan
-Write-Host "     https://github.com/leizem/windows-monitor-resources/releases/edit/v1.0.0" -ForegroundColor Cyan
+Write-Host "  1. Teste o instalador: msiexec /i dist\$MsiName /L*V install.log" -ForegroundColor Cyan
+Write-Host "  2. Verifique Programs e Features - deve aparecer apenas 1 entrada" -ForegroundColor Cyan
+Write-Host "  3. Faca upload do .msi no GitHub Release v$AppVersion :" -ForegroundColor Cyan
+Write-Host "     https://github.com/leizem/windows-monitor-resources/releases/new" -ForegroundColor Cyan
 Write-Host ""

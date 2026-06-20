@@ -40,6 +40,7 @@ app.get('/api/events', ...);
 | `si.processes()` | `{ list: [{ pid, name, pcpu, pmem, mem_rss, state, started }] }` |
 | `si.currentLoad()` | `{ currentLoad: number }` — % CPU total |
 | `si.mem()` | `{ total, active }` — bytes |
+| `si.networkStats()` | `[{ rx_sec, tx_sec, operstate, ... }]` — taxa de transferência global de rede |
 
 **Documentação**: https://systeminformation.io/
 
@@ -53,7 +54,7 @@ app.get('/api/events', ...);
 
 **Origem**: `https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js`
 
-**Papel**: Gráficos sparkline de CPU e RAM nos cards KPI.
+**Papel**: Gráficos sparkline de CPU, RAM e Rede nos cards KPI.
 
 **Funções usadas**: apenas `new Chart(ctx, config)` do tipo `'line'` com animação desabilitada.
 

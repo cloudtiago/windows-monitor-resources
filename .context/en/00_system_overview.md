@@ -10,6 +10,7 @@
 A **real-time web application** that monitors all running processes on Windows 11, displaying:
 
 - **CPU %** and **RAM** per process and system-wide
+- **Global network throughput** (Download and Upload in KB/s and MB/s)
 - **Responsiveness status** (`Responding` / `Not Responding`) for GUI applications
 - **Network latency in ms** (TCP connect time) for processes with active internet connections
 - **Event log** of app hangs and recoveries
@@ -55,11 +56,11 @@ The system runs **locally** as a Node.js server and is accessed via browser at `
 |---|---|---|---|
 | HTTP server | Express | ^4.18.2 | Serves static files + REST API |
 | WebSocket | Socket.io | ^4.7.2 | Push metrics every 2.5s |
-| System metrics | systeminformation | ^5.21.22 | CPU, RAM, process list |
+| System metrics | systeminformation | ^5.21.22 | CPU, RAM, process list, network throughput |
 | App responsiveness | Native PowerShell | Windows built-in | Only reliable way to check `.Responding` |
 | TCP connections | Native PowerShell | Windows built-in | `Get-NetTCPConnection` with OwningProcess |
 | Network latency | Node.js `net` (built-in) | Node built-in | TCP connect timing, no extra dependencies |
-| Charts | Chart.js | 4.4.0 (CDN) | CPU/RAM sparklines |
+| Charts | Chart.js | 4.4.0 (CDN) | CPU/RAM/Network sparklines |
 | Typography | Inter + JetBrains Mono | Google Fonts (CDN) | Premium design |
 
 ---

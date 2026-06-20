@@ -11,6 +11,7 @@
 Aplicação web **em tempo real** que monitora todos os processos em execução no Windows 11, exibindo:
 
 - **CPU %** e **RAM** por processo e do sistema global
+- **Taxa de transferência global de rede** (Upload e Download em KB/s e MB/s)
 - **Status de resposta** (`Responding` / `Not Responding`) de apps com interface gráfica
 - **Latência de rede em ms** (TCP connect time) para processos com conexões à internet
 - **Log de eventos** de travamentos e recuperações
@@ -57,11 +58,11 @@ O sistema roda **localmente** como servidor Node.js e é acessado pelo **Microso
 | Servidor HTTP | Express | ^4.18.2 | Serve arquivos estáticos + API REST |
 | WebSocket | Socket.io | ^4.7.2 | Push de métricas a cada 2.5s |
 | Socket.io Client | Socket.io CDN | 4.7.2 | Carregado do CDN (necessidade do pkg bundle) |
-| Métricas do sistema | systeminformation | ^5.21.22 | CPU, RAM, lista de processos |
+| Métricas do sistema | systeminformation | ^5.21.22 | CPU, RAM, lista de processos, taxa de transferência de rede |
 | Responsividade de apps | PowerShell nativo | Windows built-in | Única forma confiável de checar `.Responding` |
 | Conexões TCP | PowerShell nativo | Windows built-in | `Get-NetTCPConnection` com OwningProcess |
 | Latência de rede | Node.js `net` (built-in) | Node built-in | TCP connect timing sem dependências externas |
-| Gráficos | Chart.js | 4.4.0 (CDN) | Sparklines de CPU/RAM |
+| Gráficos | Chart.js | 4.4.0 (CDN) | Sparklines de CPU/RAM/Rede |
 | Tipografia | Inter + JetBrains Mono | Google Fonts (CDN) | Design premium |
 | Empacotamento | pkg | ^5.8.1 | Compila Node.js em .exe standalone |
 | Instalador | WiX Toolset v3 | 3.11.2 | Gera .msi com UI FeatureTree (atalho Desktop opcional) |

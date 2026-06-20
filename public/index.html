@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Monitor de Recursos — Windows 11</title>
-  <meta name="description" content="Dashboard em tempo real que monitora o tempo de resposta e performance de todos os apps em execução no Windows 11." />
+  <meta name="author" content="HT Technology" />
+  <meta name="copyright" content="Copyright © HT Technology ® 2026" />
+  <title>Monitor de Recursos — HT Technology</title>
+  <meta name="description" content="Dashboard em tempo real que monitora o tempo de resposta e performance de todos os apps em execução no Windows. Copyright © HT Technology ® 2026." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -32,7 +34,7 @@
           </defs>
         </svg>
         <span class="logo-text">Monitor de Recursos</span>
-        <span class="logo-badge">Windows 11</span>
+        <span class="logo-badge">v1.2.0</span>
       </div>
     </div>
     <div class="header-center">
@@ -49,6 +51,22 @@
         <span class="header-stat-value" id="proc-count">—</span>
       </div>
       <div class="window-controls">
+        <button class="win-btn theme-toggle" id="theme-toggle" title="Alternar Tema (Claro/Escuro)">
+          <svg class="theme-icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="theme-icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
         <button class="win-btn" id="btn-compact" title="Tamanho compacto (800×600)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
         </button>
@@ -103,6 +121,21 @@
       <canvas id="ram-chart" width="100" height="50"></canvas>
     </div>
 
+    <!-- CPU Temperature -->
+    <div class="kpi-card" id="kpi-temp">
+      <div class="kpi-icon temp-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Temp. CPU</span>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="temp-value">—</span>
+          <span class="kpi-unit" id="temp-unit">°C</span>
+        </div>
+        <span class="kpi-sub" id="temp-sub">Aguardando sensor...</span>
+      </div>
+    </div>
+
     <!-- Not Responding -->
     <div class="kpi-card alert-card" id="kpi-alert">
       <div class="kpi-icon alert-icon">
@@ -147,6 +180,21 @@
         <span class="kpi-sub" id="net-sub">Medindo latências...</span>
       </div>
     </div>
+
+    <!-- Transfer Rate -->
+    <div class="kpi-card" id="kpi-transfer">
+      <div class="kpi-icon transfer-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 17h-11v-14h-2"/><path d="M3 17l9 6 9-6"/><path d="M12 3v10"/><path d="M12 13l3-3m-3 3l-3-3"/></svg>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Taxa de Rede</span>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="net-speed-val">—</span>
+        </div>
+        <span class="kpi-sub" id="net-speed-detail">⬇️ 0 KB/s  ⬆️ 0 KB/s</span>
+      </div>
+      <canvas id="transfer-chart" width="100" height="50"></canvas>
+    </div>
   </section>
 
   <!-- ══════════════════════════════════════════════════════════
@@ -190,6 +238,10 @@
             <button class="filter-btn" id="filter-alert" data-filter="alert">⚠️ Alertas</button>
             <button class="filter-btn" id="filter-ok" data-filter="ok">✅ OK</button>
           </div>
+          <button class="export-btn" id="btn-export-csv" title="Exportar lista de processos como CSV (Ctrl+E)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Exportar CSV
+          </button>
         </div>
       </div>
 
@@ -258,6 +310,27 @@
           </div>
         </div>
 
+        <div class="net-summary-panel">
+          <div class="net-summary-item download">
+            <div class="net-summary-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+            </div>
+            <div class="net-summary-info">
+              <span class="net-summary-label">Taxa de Download</span>
+              <span class="net-summary-val mono" id="net-dl-speed">0 KB/s</span>
+            </div>
+          </div>
+          <div class="net-summary-item upload">
+            <div class="net-summary-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            </div>
+            <div class="net-summary-info">
+              <span class="net-summary-label">Taxa de Upload</span>
+              <span class="net-summary-val mono" id="net-ul-speed">0 KB/s</span>
+            </div>
+          </div>
+        </div>
+
         <div class="net-legend">
           <span class="lat-chip lat-good">≤ 50ms Ótimo</span>
           <span class="lat-chip lat-ok">51–150ms Bom</span>
@@ -292,6 +365,17 @@
        TOAST CONTAINER
   ══════════════════════════════════════════════════════════ -->
   <div class="toast-container" id="toast-container"></div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       FOOTER — Copyright
+  ══════════════════════════════════════════════════════════ -->
+  <footer class="app-footer">
+    <span class="footer-copy">Copyright &copy; HT Technology&reg; 2026</span>
+    <span class="footer-sep">·</span>
+    <span class="footer-version">Monitor de Recursos v1.2.0</span>
+    <span class="footer-sep">·</span>
+    <a class="footer-link" href="https://github.com/leizem/windows-monitor-resources" target="_blank" rel="noopener noreferrer">GitHub</a>
+  </footer>
 
   <script src="app.js"></script>
 </body>

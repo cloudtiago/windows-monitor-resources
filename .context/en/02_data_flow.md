@@ -3,52 +3,53 @@
 ## Complete collection and display flow
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│  WINDOWS OS                                                         │
-│  ┌──────────────────┐  ┌──────────────────────┐  ┌──────────────┐  │
-│  │  Get-Process     │  │ Get-NetTCPConnection  │  │ si.processes │  │
-│  │  .Responding     │  │  Established          │  │ currentLoad  │  │
-│  │  .Name .Id       │  │  OwningProcess        │  │ mem          │  │
-│  └────────┬─────────┘  └──────────┬───────────┘  └──────┬───────┘  │
-└───────────│────────────────────────│─────────────────────│──────────┘
-            │ PowerShell JSON        │ PowerShell JSON      │ npm lib
-            ▼                        ▼                      ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│  server.js — collectAndEmit()                                       │
-│                                                                     │
-│  respondingMap: Map<pid, bool>   ←  getPowerShellResponding()       │
-│  tcpConns: []                    ←  getTcpConnections()             │
-│  { procs, load, mem }            ←  getSiProcesses()                │
-│                                                                     │
-│  processList = procs.map(p => ({                                    │
-│    pid, name, pcpu, pmem, mem,                                      │
-│    responding: respondingMap.get(pid) ?? null                       │
-│  }))                                                                │
-│                                                                     │
-│  ── Event detection ──────────────────────────────────────────────  │
-│  prevNotResponding (global Set) vs currentNotResponding             │
-│  → addEvent('not_responding') or addEvent('recovered')              │
-│                                                                     │
-│  ── Latency (async, does not block emit) ─────────────────────────  │
-│  getLatencies(tcpConns)                                             │
-│    → filter non-private IPs                                         │
-│    → deduplicate by "ip:port"                                       │
-│    → check cache (TTL 15s)                                          │
-│    → measureTcpLatency(ip, port) in batches of 15                   │
-│    → latencyCache.set("ip:port", { latency, ts })                   │
-│                                                                     │
-│  networkData = buildNetworkData(tcpConns, processList)              │
-│    → group connections by PID                                       │
-│    → read latencyCache for each "ip:port"                           │
-│    → compute bestLatency = min(internet latencies)                  │
-│                                                                     │
-│  payload = {                                                        │
-│    timestamp, system, processes[0..149],                            │
-│    networkData, newEvents, eventLog[0..49]                          │
-│  }                                                                  │
-│                                                                     │
-│  io.emit('metrics', payload)                                        │
-└──────────────────────────────┬──────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│  WINDOWS OS                                                                        │
+│  ┌──────────────────┐  ┌──────────────────────┐  ┌──────────────┐  ┌─────────────┐ │
+│  │  Get-Process     │  │ Get-NetTCPConnection  │  │ si.processes │  │si.netStats  │ │
+│  │  .Responding     │  │  Established          │  │ currentLoad  │  │(rx_sec,     │ │
+│  │  .Name .Id       │  │  OwningProcess        │  │ mem          │  │ tx_sec)     │ │
+│  └────────┬─────────┘  └──────────┬───────────┘  └──────┬───────┘  └──────┬──────┘ │
+└───────────│────────────────────────│─────────────────────│────────────────│────────┘
+            │ PowerShell JSON        │ PowerShell JSON      │ npm lib        │ npm lib
+            ▼                        ▼                      ▼                ▼
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│  server.js — collectAndEmit()                                                      │
+│                                                                                    │
+│  respondingMap: Map<pid, bool>   ←  getPowerShellResponding()                      │
+│  tcpConns: []                    ←  getTcpConnections()                            │
+│  { procs, load, mem }            ←  getSiProcesses()                               │
+│  netStats: []                    ←  si.networkStats()                              │
+│                                                                                    │
+│  processList = procs.map(p => ({                                                   │
+│    pid, name, pcpu, pmem, mem,                                                     │
+│    responding: respondingMap.get(pid) ?? null                                      │
+│  }))                                                                               │
+│                                                                                    │
+│  ── Event detection ──────────────────────────────────────────────                 │
+│  prevNotResponding (global Set) vs currentNotResponding                            │
+│  → addEvent('not_responding') or addEvent('recovered')                             │
+│                                                                                    │
+│  ── Latency (async, does not block emit) ─────────────────────────                 │
+│  getLatencies(tcpConns)                                                            │
+│    → filter non-private IPs                                                        │
+│    → deduplicate by "ip:port"                                                      │
+│    → check cache (TTL 15s)                                                         │
+│    → measureTcpLatency(ip, port) in batches of 15                                  │
+│    → latencyCache.set("ip:port", { latency, ts })                                  │
+│                                                                                    │
+│  networkData = buildNetworkData(tcpConns, processList)                             │
+│    → group connections by PID                                                      │
+│    → read latencyCache for each "ip:port"                                          │
+│    → compute bestLatency = min(internet latencies)                                 │
+│                                                                                    │
+│  payload = {                                                                       │
+│    timestamp, system, processes[0..149],                                           │
+│    networkData, newEvents, eventLog[0..49]                                         │
+│  }                                                                                 │
+│                                                                                    │
+│  io.emit('metrics', payload)                                                       │
+└──────────────────────────────┬─────────────────────────────────────────────────────┘
                                │ WebSocket
                                ▼
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -76,7 +77,9 @@
     "memTotal": 34123456512,
     "memActive": 26000000000,
     "memPercent": 76.2,
-    "internetApps": 15
+    "internetApps": 15,
+    "rxSec": 25410,
+    "txSec": 1280
   },
   "processes": [
     {

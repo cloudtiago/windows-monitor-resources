@@ -1,3 +1,9 @@
+/**
+ * Monitor de Recursos — Backend v1.2.0
+ * Copyright © HT Technology ® 2026. Todos os direitos reservados.
+ * https://github.com/leizem/windows-monitor-resources
+ */
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -5,6 +11,10 @@ const si = require('systeminformation');
 const { spawn } = require('child_process');
 const net = require('net');
 const path = require('path');
+
+const APP_VERSION = '1.2.0';
+const APP_NAME    = 'Monitor de Recursos';
+const APP_AUTHOR  = 'HT Technology';
 
 const app = express();
 const server = http.createServer(app);
@@ -19,7 +29,7 @@ app.use(express.static(publicPath));
 
 // ─── In-memory event log ──────────────────────────────────────────────────────
 const eventLog = [];
-const MAX_EVENTS = 100;
+const MAX_EVENTS = 200;
 const prevNotResponding = new Set();
 
 function addEvent(procName, pid, type, message) {
@@ -152,6 +162,24 @@ async function getSiProcesses() {
   }
 }
 
+// ─── CPU Temperature (cached, refreshed every 10s) ───────────────────────────
+let cpuTempCache = null;
+let cpuTempTs = 0;
+const CPU_TEMP_TTL = 10000;
+
+async function getCpuTemperature() {
+  const now = Date.now();
+  if (cpuTempCache !== null && now - cpuTempTs < CPU_TEMP_TTL) return cpuTempCache;
+  try {
+    const temp = await si.cpuTemperature();
+    cpuTempCache = temp && temp.main !== null ? parseFloat(temp.main.toFixed(1)) : null;
+  } catch {
+    cpuTempCache = null;
+  }
+  cpuTempTs = now;
+  return cpuTempCache;
+}
+
 // ─── Build network view data ──────────────────────────────────────────────────
 function buildNetworkData(connections, processList) {
   // pid → process name map
@@ -203,10 +231,12 @@ function buildNetworkData(connections, processList) {
 
 // ─── Main collect & emit ──────────────────────────────────────────────────────
 async function collectAndEmit() {
-  const [siData, psData, tcpConns] = await Promise.all([
+  const [siData, psData, tcpConns, netStats, cpuTemp] = await Promise.all([
     getSiProcesses(),
     getPowerShellResponding(),
-    getTcpConnections()
+    getTcpConnections(),
+    si.networkStats(),
+    getCpuTemperature()
   ]);
 
   const { procs, load, mem } = siData;
@@ -250,6 +280,18 @@ async function collectAndEmit() {
     return b.pcpu - a.pcpu;
   });
 
+  // Calculate global network transfer rates (Download/Upload)
+  let rxSec = 0;
+  let txSec = 0;
+  if (Array.isArray(netStats)) {
+    for (const iface of netStats) {
+      if (iface.operstate === 'up' && iface.rx_sec !== null && iface.tx_sec !== null) {
+        rxSec += iface.rx_sec;
+        txSec += iface.tx_sec;
+      }
+    }
+  }
+
   // Update latency cache (async, don't block emit)
   getLatencies(tcpConns).catch(() => {});
 
@@ -260,14 +302,18 @@ async function collectAndEmit() {
 
   const payload = {
     timestamp: Date.now(),
+    version: APP_VERSION,
     system: {
       cpuLoad: parseFloat((load.currentLoad || 0).toFixed(1)),
+      cpuTemp: cpuTemp,
       memTotal: mem.total,
       memActive: mem.active,
       memPercent: parseFloat(((mem.active / mem.total) * 100).toFixed(1)),
-      internetApps: internetAppsCount
+      internetApps: internetAppsCount,
+      rxSec: Math.round(rxSec),
+      txSec: Math.round(txSec)
     },
-    processes: processList.slice(0, 150),
+    processes: processList.slice(0, 200),
     networkData,
     newEvents,
     eventLog: eventLog.slice(0, 50)
@@ -297,7 +343,39 @@ poll();
 setInterval(poll, 2500);
 
 // ─── API endpoints ────────────────────────────────────────────────────────────
-app.get('/api/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime(), version: APP_VERSION }));
 app.get('/api/events', (req, res) => res.json(eventLog));
+app.get('/api/version', (req, res) => res.json({
+  name: APP_NAME,
+  version: APP_VERSION,
+  author: APP_AUTHOR,
+  copyright: `© ${APP_AUTHOR} ® 2026`,
+  buildDate: '2026-06-20',
+  homepage: 'https://github.com/leizem/windows-monitor-resources'
+}));
 
-server.listen(PORT, () => console.log(`\n🖥️  Monitor de Recursos rodando em http://localhost:${PORT}\n`));
+// ─── Graceful shutdown ────────────────────────────────────────────────────────
+function shutdown(signal) {
+  console.log(`\n[!] Sinal ${signal} recebido. Encerrando servidor...`);
+  io.close(() => {
+    server.close(() => {
+      console.log('[✓] Servidor encerrado com sucesso.');
+      process.exit(0);
+    });
+  });
+  setTimeout(() => { console.error('[!] Forçando encerramento após timeout.'); process.exit(1); }, 5000);
+}
+process.on('SIGINT',  () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+// ─── Start ────────────────────────────────────────────────────────────────────
+server.listen(PORT, () => {
+  console.log('');
+  console.log('  ╔══════════════════════════════════════════════════╗');
+  console.log(`  ║   🖥️  ${APP_NAME} v${APP_VERSION}                  ║`);
+  console.log(`  ║   © ${APP_AUTHOR} ® 2026                       ║`);
+  console.log('  ╠══════════════════════════════════════════════════╣');
+  console.log(`  ║   URL : http://localhost:${PORT}                    ║`);
+  console.log('  ╚══════════════════════════════════════════════════╝');
+  console.log('');
+});

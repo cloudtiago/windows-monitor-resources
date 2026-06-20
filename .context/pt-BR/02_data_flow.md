@@ -3,22 +3,23 @@
 ## Fluxo completo de coleta e exibição
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│  WINDOWS OS                                                         │
-│  ┌──────────────────┐  ┌──────────────────────┐  ┌──────────────┐  │
-│  │  Get-Process     │  │ Get-NetTCPConnection  │  │ si.processes │  │
-│  │  .Responding     │  │  Established          │  │ currentLoad  │  │
-│  │  .Name .Id       │  │  OwningProcess        │  │ mem          │  │
-│  └────────┬─────────┘  └──────────┬───────────┘  └──────┬───────┘  │
-└───────────│────────────────────────│─────────────────────│──────────┘
-            │ PowerShell JSON        │ PowerShell JSON      │ npm lib
-            ▼                        ▼                      ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│  server.js — collectAndEmit()                                       │
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│  WINDOWS OS                                                                        │
+│  ┌──────────────────┐  ┌──────────────────────┐  ┌──────────────┐  ┌─────────────┐ │
+│  │  Get-Process     │  │ Get-NetTCPConnection  │  │ si.processes │  │si.netStats  │ │
+│  │  .Responding     │  │  Established          │  │ currentLoad  │  │(rx_sec,     │ │
+│  │  .Name .Id       │  │  OwningProcess        │  │ mem          │  │ tx_sec)     │ │
+│  └────────┬─────────┘  └──────────┬───────────┘  └──────┬───────┘  └──────┬──────┘ │
+└───────────│────────────────────────│─────────────────────│────────────────│────────┘
+            │ PowerShell JSON        │ PowerShell JSON      │ npm lib        │ npm lib
+            ▼                        ▼                      ▼                ▼
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│  server.js — collectAndEmit()                                                      │
 │                                                                     │
 │  respondingMap: Map<pid, bool>   ←  getPowerShellResponding()       │
 │  tcpConns: []                    ←  getTcpConnections()             │
 │  { procs, load, mem }            ←  getSiProcesses()                │
+│  netStats: []                    ←  si.networkStats()               │
 │                                                                     │
 │  processList = procs.map(p => ({                                    │
 │    pid, name, pcpu, pmem, mem,                                      │
@@ -76,7 +77,9 @@
     "memTotal": 34123456512,
     "memActive": 26000000000,
     "memPercent": 76.2,
-    "internetApps": 15
+    "internetApps": 15,
+    "rxSec": 25410,
+    "txSec": 1280
   },
   "processes": [
     {

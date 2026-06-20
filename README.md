@@ -1,159 +1,190 @@
-# 🖥️ Windows 11 Resource Monitor
+# 🖥️ Monitor de Recursos — HT Technology
 
-> Real-time web dashboard to monitor process performance and network latency on Windows 11
+> Dashboard web em tempo real para monitorar performance de processos e latência de rede no Windows
 
+[![Versão](https://img.shields.io/badge/versão-1.2.0-7c3aed)](https://github.com/leizem/windows-monitor-resources/releases)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D16-green)](https://nodejs.org)
 [![Windows](https://img.shields.io/badge/OS-Windows%2010%2F11-blue)](https://microsoft.com/windows)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
-
-![Dashboard Screenshot](https://raw.githubusercontent.com/leizem/windows-monitor-resources/main/.context/screenshot.png)
+[![Copyright](https://img.shields.io/badge/Copyright-%C2%A9%20HT%20Technology%C2%AE%202026-orange)](https://github.com/leizem)
 
 ---
 
 ## ✨ Features
 
-| Feature | Description |
+| Feature | Descrição |
 |---|---|
-| 📊 **Live Process Table** | CPU %, RAM (MB/%), status, sparklines — updated every 2.5s |
-| ⚠️ **Not Responding Detection** | Detects and highlights frozen apps using PowerShell `.Responding` |
-| 🌐 **Network Latency (ms)** | TCP connect time per internet-connected process |
-| 📈 **System KPI Cards** | CPU load, RAM usage, internet apps count with sparkline charts |
-| 🔔 **Toast Notifications** | Instant alerts when an app freezes or recovers |
-| 📝 **Event Log** | Persistent in-session history of all hang/recover events |
-| 🔍 **Filter & Search** | Filter by name, sort by any column, toggle between tabs |
-| 🎨 **Premium Dark UI** | Glassmorphism design with animated elements |
+| 📊 **Processos em Tempo Real** | CPU %, RAM (MB/%), status, sparklines — atualizado a cada 2.5s |
+| 🌡️ **Temperatura da CPU** | Monitoramento via sensor de hardware (quando disponível) |
+| ⚠️ **Detecção de Travamentos** | Detecta e destaca apps congelados via PowerShell `.Responding` |
+| 🚀 **Velocidade de Rede** | Download & Upload em tempo real com sparkline auto-escalável |
+| 🌐 **Latência por App** | Tempo TCP por processo conectado à internet |
+| 📈 **KPI Cards** | CPU, RAM, Temperatura, Alertas, Processos, Apps online, Taxa de rede |
+| 🔔 **Toast Notifications** | Alertas instantâneos quando um app trava ou recupera |
+| 📝 **Log de Eventos** | Histórico em sessão de todos os eventos de hang/recover |
+| 📥 **Export CSV** | Exporta lista de processos filtrada (Ctrl+E) |
+| 🔍 **Filtro & Busca** | Filtra por nome, ordena por qualquer coluna, alterna entre abas |
+| 🎨 **UI Glassmorphism** | Design dark premium com animações e tema claro/escuro |
 
 ---
 
 ## 🚀 Quick Start
 
 ```bash
-# Clone the repository
+# Clone o repositório
 git clone https://github.com/leizem/windows-monitor-resources.git
 cd windows-monitor-resources
 
-# Install dependencies
+# Instale as dependências
 npm install
 
-# Start the server
+# Inicie o servidor
 npm start
 
-# Open in browser
+# Abra no browser
 # http://localhost:3030
 ```
 
-**Requirements:**
-- Windows 10 or Windows 11
+**Requisitos:**
+- Windows 10 ou Windows 11
 - Node.js >= 16.x
-- PowerShell >= 5.1 (built into Windows)
+- PowerShell >= 5.1 (built-in no Windows)
 
 ---
 
-## 🏗️ Architecture
+## 📦 Instalador MSI (Recomendado)
+
+Baixe o instalador pronto na [página de releases](https://github.com/leizem/windows-monitor-resources/releases):
+
+```
+monitor-recursos-v1.2.0-win-x64.msi  (13.2 MB)
+```
+
+O instalador:
+- Instala em `%ProgramFiles%\Monitor de Recursos\`
+- Cria atalho no Menu Iniciar
+- Cria atalho no Desktop (opcional)
+- Abre automaticamente no Microsoft Edge em modo `--app`
+
+---
+
+## 🆕 Novidades v1.2.0 (20/06/2026)
+
+| Melhoria | Detalhe |
+|---|---|
+| 🌡️ **KPI Temperatura CPU** | Novo card com indicador visual (Frio/Normal/Quente/Crítico) |
+| 📥 **Export CSV** | Botão + atalho Ctrl+E para exportar processos filtrados |
+| 🔒 **Upgrade limpo** | `MajorUpgrade Schedule=afterInstallInitialize` — sem entradas duplicadas no Painel de Controle |
+| ⬆️ **Limite de processos** | 150 → 200 processos no payload |
+| 📝 **Log expandido** | MAX_EVENTS 100 → 200 |
+| 🛑 **Graceful Shutdown** | Servidor encerra corretamente com SIGINT/SIGTERM |
+| 🌐 **Endpoint `/api/version`** | Retorna metadata completa do app |
+| 🏷️ **Copyright © HT Technology® 2026** | Em todos os arquivos e no footer da UI |
+
+---
+
+## 🏗️ Arquitetura
 
 ```
 server.js (Node.js Backend)
-├── Express         → Serves static files + REST API (/api/health, /api/events)
-├── Socket.io       → WebSocket push every 2.5s to all clients
-├── systeminformation → CPU %, RAM, process list
+├── Express         → Serve arquivos estáticos + REST API
+├── Socket.io       → WebSocket push a cada 2.5s para todos os clientes
+├── systeminformation → CPU %, RAM, processos, rede, temperatura
 ├── PowerShell spawn  → Get-Process (.Responding) + Get-NetTCPConnection
-└── net.Socket        → TCP connect timing for latency measurement
+└── net.Socket        → Medição de latência TCP
 
 public/ (Frontend)
-├── index.html   → Dashboard structure (tabs, KPI cards, tables)
-├── style.css    → Vanilla CSS dark glassmorphism design system
-└── app.js       → Socket.io client, Chart.js, table rendering, state management
+├── index.html   → Dashboard (tabs, KPI cards, tabelas, footer)
+├── style.css    → Vanilla CSS glassmorphism (dark/light, responsivo)
+└── app.js       → Socket.io client, Chart.js, sparklines, Export CSV
 ```
 
 ---
 
-## 📡 How Latency Measurement Works
+## 📡 Como a Medição de Latência Funciona
 
-1. **Detect connections**: PowerShell `Get-NetTCPConnection -State Established` retrieves all active TCP connections with their owning process PID
-2. **Filter internet**: private/loopback IPs (RFC1918 + IPv6) are excluded
-3. **Measure**: `net.Socket.connect()` timing to each unique `ip:port` (TCP handshake time)
-4. **Cache**: results cached for 15 seconds to avoid network saturation
-5. **Batch**: max 15 parallel measurements per cycle
+1. **Detecta conexões**: PowerShell `Get-NetTCPConnection -State Established` com o PID do processo dono
+2. **Filtra internet**: IPs privados/loopback (RFC1918 + IPv6) são excluídos
+3. **Mede**: `net.Socket.connect()` timing para cada `ip:port` único (TCP handshake)
+4. **Cache**: resultados cacheados por 15 segundos para evitar saturação da rede
+5. **Batch**: máximo 15 medições paralelas por ciclo
 
-### Latency thresholds
+### Thresholds de Latência
 
-| Range | Rating |
+| Faixa | Classificação |
 |---|---|
-| ≤ 50ms | 🟢 Excellent |
-| 51–150ms | 🔵 Good |
-| 151–300ms | 🟡 Slow |
-| > 300ms | 🔴 Critical |
+| ≤ 50ms | 🟢 Ótimo |
+| 51–150ms | 🔵 Bom |
+| 151–300ms | 🟡 Lento |
+| > 300ms | 🔴 Crítico |
 
 ---
 
-## 📁 Project Structure
+## 📁 Estrutura do Projeto
 
 ```
 windows-monitor-resources/
 ├── server.js              # Backend (Node.js)
-├── package.json
+├── package.json           # v1.2.0
 ├── public/
 │   ├── index.html         # Dashboard
-│   ├── style.css          # Styles
-│   └── app.js             # Frontend logic
-└── .context/               # Technical documentation
-    ├── pt-BR/             # Portuguese (BR) docs
-    │   ├── 00_system_overview.md
-    │   ├── 01_architecture.md
-    │   ├── 02_data_flow.md
-    │   ├── 03_domain_rules.md
-    │   ├── 04_api_contracts.md
-    │   ├── 05_environment_variables.md
-    │   ├── 06_dependencies.md
-    │   ├── 07_deployment.md
-    │   ├── 08_extension_points.md
-    │   ├── 09_known_limitations.md
-    │   └── 10_decision_log.md
-    └── en/                # English docs
-        └── (same files)
+│   ├── style.css          # Estilos
+│   └── app.js             # Lógica frontend
+├── installer/
+│   ├── monitor-recursos.wxs  # WiX v3 installer source
+│   ├── launcher.vbs          # Abre Edge --app na porta 3030
+│   ├── license.rtf           # Licença MIT exibida no installer
+│   ├── icon.ico              # Ícone do app
+│   └── icon.png              # Ícone PNG
+├── scripts/
+│   └── build-msi.ps1         # Build automatizado (pkg + WiX)
+└── .context/                 # Documentação técnica
+    ├── pt-BR/
+    └── en/
 ```
 
 ---
 
 ## 🔌 REST API
 
-| Endpoint | Description |
+| Endpoint | Descrição |
 |---|---|
-| `GET /api/health` | `{ "status": "ok", "uptime": <seconds> }` |
-| `GET /api/events` | Full event log array (JSON) |
+| `GET /api/health` | `{ "status": "ok", "uptime": <segundos>, "version": "1.2.0" }` |
+| `GET /api/events` | Array do log de eventos (JSON) |
+| `GET /api/version` | `{ "name", "version", "author", "copyright", "buildDate", "homepage" }` |
 
 ---
 
-## ⚙️ Configuration
+## ⚙️ Configuração
 
-All configuration is hardcoded in `server.js`. Key constants:
+Todas as configurações estão em `server.js`:
 
-| Constant | Default | Description |
+| Constante | Padrão | Descrição |
 |---|---|---|
-| `PORT` | `3030` | HTTP/WebSocket port |
-| `LATENCY_TTL` | `15000ms` | Latency cache TTL |
-| `MAX_EVENTS` | `100` | Max events in memory |
-| Poll interval | `2500ms` | Collection frequency |
-| Process limit | `150` | Max processes in payload |
+| `PORT` | `3030` | Porta HTTP/WebSocket |
+| `LATENCY_TTL` | `15000ms` | TTL do cache de latência |
+| `MAX_EVENTS` | `200` | Máximo de eventos em memória |
+| Poll interval | `2500ms` | Frequência de coleta |
+| Process limit | `200` | Máximo de processos no payload |
+| `CPU_TEMP_TTL` | `10000ms` | Cache de temperatura CPU |
 
 ---
 
-## ⚠️ Known Limitations
+## ⚠️ Limitações Conhecidas
 
-- **Windows only** — uses PowerShell Win32 APIs not available on Linux/macOS
-- **`.Responding` only works for GUI apps** — services and console processes show `null`
-- **No persistence** — event log and cache reset on server restart
-- **No authentication** — do not expose to the internet without adding auth
-- **TCP latency only** — UDP and QUIC (HTTP/3) connections are not measurable
-
-See [`.context/en/09_known_limitations.md`](.context/en/09_known_limitations.md) for the full list.
+- **Somente Windows** — usa APIs PowerShell Win32 não disponíveis no Linux/macOS
+- **`.Responding` só funciona para apps GUI** — serviços e processos de console exibem `null`
+- **Temperatura CPU pode não estar disponível** — depende do suporte do hardware/driver
+- **Sem persistência** — log de eventos e cache reiniciam ao reiniciar o servidor
+- **Sem autenticação** — não exponha à internet sem adicionar auth
+- **Somente latência TCP** — conexões UDP e QUIC (HTTP/3) não são mensuráveis
 
 ---
 
-## 🛠️ Run as a Windows Service
+## 🛠️ Executar como Serviço Windows
 
 ```bash
-# Using PM2
+# Usando PM2
 npm install -g pm2
 pm2 start server.js --name "monitor-recursos"
 pm2 startup && pm2 save
@@ -161,34 +192,38 @@ pm2 startup && pm2 save
 
 ---
 
-## 📚 Full Documentation
+## 🤝 Contribuindo
 
-Complete technical documentation (architecture, data flow, API contracts, extension points, decision log) is available in:
+1. Fork o repositório
+2. Crie uma branch: `git checkout -b feature/minha-feature`
+3. Commit: `git commit -m 'feat: adiciona minha feature'`
+4. Push: `git push origin feature/minha-feature`
+5. Abra um Pull Request
 
-- **Portuguese**: [`.context/pt-BR/`](.context/pt-BR/)
+---
+
+## 📄 Licença
+
+MIT License — veja o arquivo [LICENSE](LICENSE).
+
+---
+
+## 📚 Documentação Completa
+
+Documentação técnica completa (arquitetura, fluxo de dados, contratos de API, pontos de extensão) em:
+
+- **Português**: [`.context/pt-BR/`](.context/pt-BR/)
 - **English**: [`.context/en/`](.context/en/)
 
 ---
 
-## 🤝 Contributing
+## 🙏 Agradecimentos
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Commit your changes: `git commit -m 'feat: add my feature'`
-4. Push to the branch: `git push origin feature/my-feature`
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE) file.
+- [systeminformation](https://systeminformation.io/) — métricas de sistema multiplataforma
+- [Socket.io](https://socket.io/) — comunicação WebSocket em tempo real
+- [Chart.js](https://www.chartjs.org/) — gráficos sparkline
+- [Inter](https://rsms.me/inter/) + [JetBrains Mono](https://www.jetbrains.com/lp/mono/) — tipografia
 
 ---
 
-## 🙏 Acknowledgements
-
-- [systeminformation](https://systeminformation.io/) — cross-platform system metrics
-- [Socket.io](https://socket.io/) — real-time WebSocket communication
-- [Chart.js](https://www.chartjs.org/) — sparkline charts
-- [Inter](https://rsms.me/inter/) + [JetBrains Mono](https://www.jetbrains.com/lp/mono/) — typography
+**Copyright © HT Technology® 2026. Todos os direitos reservados.**
