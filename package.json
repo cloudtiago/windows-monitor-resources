@@ -1,6 +1,6 @@
 {
   "name": "monitor-de-recursos",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Monitor de tempo de resposta e performance de apps no Windows — HT Technology",
   "main": "server.js",
   "bin": "server.js",

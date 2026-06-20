@@ -1,5 +1,5 @@
 /**
- * Monitor de Recursos — Frontend v1.2.0
+ * Monitor de Recursos — Frontend v1.2.1
  * Copyright © HT Technology® 2026. Todos os direitos reservados.
  * https://github.com/leizem/windows-monitor-resources
  */
@@ -285,6 +285,8 @@ function cpuClass(v) {
 function statusBadge(p) {
   if (p.responding === false)
     return `<span class="status-badge badge-alert">⚠️ Travado</span>`;
+  if (p.isUwp)
+    return `<span class="status-badge badge-uwp" title="App UWP/Sistema - usa ciclo de vida suspenso (normal)">UWP</span>`;
   if (p.responding === true)
     return `<span class="status-badge badge-ok">✓ OK</span>`;
   return `<span class="status-badge badge-bg">— BG</span>`;

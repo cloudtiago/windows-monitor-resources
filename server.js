@@ -1,6 +1,6 @@
 /**
- * Monitor de Recursos — Backend v1.2.0
- * Copyright © HT Technology ® 2026. Todos os direitos reservados.
+ * Monitor de Recursos — Backend v1.2.1
+ * Copyright © HT Technology® 2026. Todos os direitos reservados.
  * https://github.com/leizem/windows-monitor-resources
  */
 
@@ -12,7 +12,7 @@ const { spawn } = require('child_process');
 const net = require('net');
 const path = require('path');
 
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 const APP_NAME    = 'Monitor de Recursos';
 const APP_AUTHOR  = 'HT Technology';
 
@@ -31,6 +31,58 @@ app.use(express.static(publicPath));
 const eventLog = [];
 const MAX_EVENTS = 200;
 const prevNotResponding = new Set();
+
+// ─── UWP / System process exclusion list ─────────────────────────────────────
+// These processes use the UWP lifecycle model (suspension + event-driven I/O)
+// and do NOT respond correctly to IsHungAppWindow / WaitForInputIdle (Win32 API).
+// Marking them as "Not Responding" via Get-Process .Responding is a known
+// false positive. We treat their respond status as null (= Background) instead.
+// Reference: https://learn.microsoft.com/windows/apps/develop/processes
+const UWP_EXCLUSIONS = new Set([
+  // Windows Settings & Shell
+  'systemsettings',
+  'shellexperiencehost',
+  'startmenuexperiencehost',
+  'searchapp',
+  'searchui',
+  'lockapp',
+  'logonui',
+  'applicationframehost',   // Win32 frame host for all UWP windows
+  'textinputhost',          // Touch keyboard
+  'fontdrvhost',
+  'ctfmon',
+  // UWP brokers & runtime
+  'runtimebroker',          // Permissions broker for UWP (camera, location, etc.)
+  'wwahost',                // Windows Web Application host
+  'backgroundtaskhost',
+  'sihost',                 // Shell infrastructure host
+  'taskhostw',
+  // Built-in UWP apps
+  'calculator',
+  'photos',
+  'microsoftedge',          // UWP version (legacy)
+  'hxoutlook',              // Mail app
+  'hxcalendarappimm',       // Calendar app
+  'yourphone',              // Phone Link
+  'phonexperiencehost',
+  'people',
+  'bingweather',
+  'windowscamera',
+  'gamebar',
+  'xboxgamebar',
+  'xboxgameoverlay',
+  'mixedrealityportal',
+  'winstore.app',           // Microsoft Store
+  'winhello',
+].map(n => n.toLowerCase()));
+
+// Returns true if the process name is a known UWP/system app (false positive)
+function isUwpProcess(name) {
+  if (!name) return false;
+  // Match by exact name (without .exe) case-insensitive
+  const base = name.toLowerCase().replace(/\.exe$/, '');
+  return UWP_EXCLUSIONS.has(base);
+}
 
 function addEvent(procName, pid, type, message) {
   const event = { id: Date.now() + Math.random(), timestamp: new Date().toISOString(), procName, pid, type, message };
@@ -244,16 +296,24 @@ async function collectAndEmit() {
   const respondingMap = new Map();
   for (const p of psData) respondingMap.set(p.Id, p.Responding);
 
-  const processList = (procs.list || []).map(p => ({
-    pid: p.pid,
-    name: p.name,
-    pcpu: parseFloat((p.pcpu || 0).toFixed(2)),
-    pmem: parseFloat((p.pmem || 0).toFixed(2)),
-    mem: Math.round((p.mem_rss || 0) / 1024),
-    state: p.state || '',
-    started: p.started || null,
-    responding: respondingMap.has(p.pid) ? respondingMap.get(p.pid) : null
-  }));
+  const processList = (procs.list || []).map(p => {
+    const uwp = isUwpProcess(p.name);
+    // For UWP processes: never report false (not responding) — it's a false positive
+    // For Win32 processes: use the PowerShell .Responding value as-is
+    const rawResponding = respondingMap.has(p.pid) ? respondingMap.get(p.pid) : null;
+    const responding = uwp && rawResponding === false ? null : rawResponding;
+    return {
+      pid: p.pid,
+      name: p.name,
+      pcpu: parseFloat((p.pcpu || 0).toFixed(2)),
+      pmem: parseFloat((p.pmem || 0).toFixed(2)),
+      mem: Math.round((p.mem_rss || 0) / 1024),
+      state: p.state || '',
+      started: p.started || null,
+      responding,
+      isUwp: uwp
+    };
+  });
 
   // Not responding events
   const newEvents = [];

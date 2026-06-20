@@ -8,7 +8,7 @@
   Features:
     ┌─ Aplicação Principal  (obrigatória, com botão Procurar para pasta)
     └─ Atalho no Desktop    (opcional — usuário marca/desmarca)
-  Output:  dist\monitor-recursos-v1.2.0-win-x64.msi
+  Output:  dist\monitor-recursos-v1.2.1-win-x64.msi
   Build:   npm run build:msi
 
   NOTAS DE UPGRADE:
@@ -26,7 +26,7 @@
     Id="*"
     Name="Monitor de Recursos"
     Language="1046"
-    Version="1.2.0.0"
+    Version="1.2.1.0"
     Manufacturer="HT Technology"
     UpgradeCode="{A8B3D5F2-1C4E-4A7B-9E6D-2F8C3A5B7D9E}">
 
@@ -35,7 +35,7 @@
       Compressed="yes"
       InstallScope="perMachine"
       Platform="x64"
-      Description="Monitor de Recursos v1.2.0 — Copyright © HT Technology® 2026"
+      Description="Monitor de Recursos v1.2.1 — Copyright © HT Technology® 2026"
       Comments="Dashboard web local — http://localhost:3030" />
 
     <!-- ─── Upgrade da versão atual (mesmo UpgradeCode) ────────────────────────── -->

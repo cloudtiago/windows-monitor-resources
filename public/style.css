@@ -392,6 +392,7 @@ body, .header, .kpi-card, .table-section, .event-section, th, td, .search-box, .
 .badge-ok    { background: rgba(16,185,129,0.12); color: var(--green-l); border: 1px solid rgba(16,185,129,0.2); }
 .badge-alert { background: rgba(239,68,68,0.12);  color: var(--red-l);   border: 1px solid rgba(239,68,68,0.25); }
 .badge-bg    { background: rgba(100,116,139,0.12); color: var(--text-3);  border: 1px solid var(--border); }
+.badge-uwp   { background: rgba(6,182,212,0.10);   color: var(--cyan-l);  border: 1px solid rgba(6,182,212,0.2); font-size: 0.65rem; letter-spacing: 0.04em; cursor: default; }
 
 .proc-name { font-weight: 500; }
 .proc-name-txt { display: block; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

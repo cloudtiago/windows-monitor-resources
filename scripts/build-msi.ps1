@@ -15,7 +15,7 @@ $DistDir      = Join-Path $ProjectRoot "dist"
 $ToolsWixDir  = Join-Path $ProjectRoot "tools\wix"
 $InstallerDir = Join-Path $ProjectRoot "installer"
 
-$AppVersion = "1.2.0"
+$AppVersion = "1.2.1"
 $ExeName    = "monitor-recursos.exe"
 $ExePath    = Join-Path $DistDir $ExeName
 $MsiName    = "monitor-recursos-v$AppVersion-win-x64.msi"
