@@ -1,6 +1,6 @@
 #Requires -Version 5.1
 # =============================================================================
-#  Monitor de Recursos - Build MSI Installer v1.2.0
+#  Monitor de Recursos - Build MSI Installer v1.2.1
 #  Copyright © HT Technology® 2026. Todos os direitos reservados.
 #  Gera o executavel standalone (pkg) e o instalador .msi (WiX v3)
 #  Uso: npm run build:msi
@@ -117,5 +117,5 @@ Write-Host "  --- Proximos passos -------------------------------------------" -
 Write-Host "  1. Teste o instalador: msiexec /i dist\$MsiName /L*V install.log" -ForegroundColor Cyan
 Write-Host "  2. Verifique Programs e Features - deve aparecer apenas 1 entrada" -ForegroundColor Cyan
 Write-Host "  3. Faca upload do .msi no GitHub Release v$AppVersion :" -ForegroundColor Cyan
-Write-Host "     https://github.com/leizem/windows-monitor-resources/releases/new" -ForegroundColor Cyan
+Write-Host "     https://github.com/cloudtiago/windows-monitor-resources/releases/new" -ForegroundColor Cyan
 Write-Host ""

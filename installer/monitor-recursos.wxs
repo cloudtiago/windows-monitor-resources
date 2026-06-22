@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Monitor de Recursos — WiX v3 Installer Source  v1.2.0
+  Monitor de Recursos — WiX v3 Installer Source  v1.2.1
   Copyright © HT Technology® 2026. Todos os direitos reservados.
   ─────────────────────────────────────────────────────────────────────────────
   UI:      WixUI_FeatureTree
@@ -55,9 +55,9 @@
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
 
     <!-- Add/Remove Programs -->
-    <Property Id="ARPURLINFOABOUT" Value="https://github.com/leizem/windows-monitor-resources" />
-    <Property Id="ARPCONTACT"      Value="https://github.com/leizem" />
-    <Property Id="ARPHELPLINK"     Value="https://github.com/leizem/windows-monitor-resources/issues" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/cloudtiago/windows-monitor-resources" />
+    <Property Id="ARPCONTACT"      Value="https://github.com/cloudtiago" />
+    <Property Id="ARPHELPLINK"     Value="https://github.com/cloudtiago/windows-monitor-resources/issues" />
     <Property Id="ARPPRODUCTICON"  Value="AppIcon" />
 
     <!-- App icon (used in ARP, shortcuts and taskbar) -->
@@ -140,10 +140,11 @@
               KeyPath="yes" />
       </Component>
 
-      <!-- VBScript: inicia o servidor e abre o browser -->
+      <!-- PowerShell launcher: inicia o servidor e abre o browser -->
+      <!-- Substitui launcher.vbs (incompatível com Windows 11 24H2+ / KB5042881) -->
       <Component Id="LauncherComp" Guid="*">
-        <File Id="LauncherVbs"
-              Source="installer\launcher.vbs"
+        <File Id="LauncherPs1"
+              Source="installer\launcher.ps1"
               KeyPath="yes" />
       </Component>
 
@@ -183,8 +184,8 @@
                 Directory="AppMenuFolder"
                 Name="Monitor de Recursos"
                 Description="Abre o monitor de recursos e rede (http://localhost:3030)"
-                Target="[System64Folder]wscript.exe"
-                Arguments="&quot;[INSTALLFOLDER]launcher.vbs&quot;"
+                Target="[System64Folder]WindowsPowerShell\v1.0\powershell.exe"
+                Arguments="-WindowStyle Hidden -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]launcher.ps1&quot;"
                 WorkingDirectory="INSTALLFOLDER"
                 Icon="AppIcon" />
 
@@ -226,8 +227,8 @@
                 Directory="DesktopFolder"
                 Name="Monitor de Recursos"
                 Description="Abre o monitor de recursos e rede (http://localhost:3030)"
-                Target="[System64Folder]wscript.exe"
-                Arguments="&quot;[INSTALLFOLDER]launcher.vbs&quot;"
+                Target="[System64Folder]WindowsPowerShell\v1.0\powershell.exe"
+                Arguments="-WindowStyle Hidden -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]launcher.ps1&quot;"
                 WorkingDirectory="INSTALLFOLDER"
                 Icon="AppIcon" />
 

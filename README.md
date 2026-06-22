@@ -6,9 +6,9 @@
 [![Windows](https://img.shields.io/badge/OS-Windows%2010%2F11-blue)](https://microsoft.com/windows)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-![Dashboard Screenshot](https://raw.githubusercontent.com/leizem/windows-monitor-resources/main/.context/Screenshot1.png)
+![Dashboard Screenshot](https://raw.githubusercontent.com/cloudtiago/windows-monitor-resources/main/.context/Screenshot1.png)
 
-![Dashboard Screenshot](https://raw.githubusercontent.com/leizem/windows-monitor-resources/main/.context/Screenshot2.png)
+![Dashboard Screenshot](https://raw.githubusercontent.com/cloudtiago/windows-monitor-resources/main/.context/Screenshot2.png)
 ---
 
 ## ✨ Features
@@ -30,7 +30,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/leizem/windows-monitor-resources.git
+git clone https://github.com/cloudtiago/windows-monitor-resources.git
 cd windows-monitor-resources
 
 # Install dependencies

@@ -4,9 +4,9 @@
   "description": "Monitor de tempo de resposta e performance de apps no Windows — HT Technology",
   "main": "server.js",
   "bin": "server.js",
-  "author": "HT Technology <https://github.com/leizem>",
+  "author": "HT Technology <https://github.com/cloudtiago>",
   "license": "MIT",
-  "homepage": "https://github.com/leizem/windows-monitor-resources",
+  "homepage": "https://github.com/cloudtiago/windows-monitor-resources",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
