@@ -1,6 +1,6 @@
 #Requires -Version 5.1
 # =============================================================================
-#  Monitor de Recursos - Build MSI Installer v1.2.1
+#  Monitor de Recursos - Build MSI Installer v1.2.2
 #  Copyright © HT Technology® 2026. Todos os direitos reservados.
 #  Gera o executavel standalone (pkg) e o instalador .msi (WiX v3)
 #  Uso: npm run build:msi
@@ -15,7 +15,7 @@ $DistDir      = Join-Path $ProjectRoot "dist"
 $ToolsWixDir  = Join-Path $ProjectRoot "tools\wix"
 $InstallerDir = Join-Path $ProjectRoot "installer"
 
-$AppVersion = "1.2.1"
+$AppVersion = "1.2.2"
 $ExeName    = "monitor-recursos.exe"
 $ExePath    = Join-Path $DistDir $ExeName
 $MsiName    = "monitor-recursos-v$AppVersion-win-x64.msi"
@@ -28,6 +28,13 @@ $WixZipPath = Join-Path $ProjectRoot "tools\wix311-binaries.zip"
 $CandleExe  = Join-Path $ToolsWixDir "candle.exe"
 $LightExe   = Join-Path $ToolsWixDir "light.exe"
 
+# signtool.exe — incluido no Windows SDK 10 (Tools\bin\i386)
+$SignTool  = "C:\Program Files (x86)\Windows Kits\10\Tools\bin\i386\signtool.exe"
+$CertStore = "Cert:\LocalMachine\My"
+$CertSubj  = "HT Technology"
+$PfxPath   = Join-Path $InstallerDir "HTTechnology.pfx"
+$PfxPass   = "HTTech2026!"
+
 # --- Banner ------------------------------------------------------------------
 Write-Host ""
 Write-Host "  ============================================================" -ForegroundColor Cyan
@@ -37,7 +44,7 @@ Write-Host "  ============================================================" -For
 Write-Host ""
 
 # --- Step 1: Prepare directories + clean old artifacts ----------------------
-Write-Host "[1/5] Preparando diretorios e limpando build anterior..." -ForegroundColor Yellow
+Write-Host "[1/6] Preparando diretorios e limpando build anterior..." -ForegroundColor Yellow
 New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $ProjectRoot "tools") | Out-Null
 
@@ -53,7 +60,7 @@ if (Test-Path $WixObjPath) { Remove-Item $WixObjPath -Force }
 Write-Host "      OK - diretorios prontos" -ForegroundColor Green
 
 # --- Step 2: Build standalone .exe with pkg ---------------------------------
-Write-Host "[2/5] Empacotando com pkg (Node.js standalone .exe)..." -ForegroundColor Yellow
+Write-Host "[2/6] Empacotando com pkg (Node.js standalone .exe)..." -ForegroundColor Yellow
 Write-Host "      Isso pode levar 1-3 minutos na primeira execucao..." -ForegroundColor Gray
 
 Set-Location $ProjectRoot
@@ -68,7 +75,7 @@ $ExeMB = [math]::Round((Get-Item $ExePath).Length / 1MB, 1)
 Write-Host "      OK - $ExeName ($ExeMB MB) criado em dist\" -ForegroundColor Green
 
 # --- Step 3: Download WiX v3 binaries ---------------------------------------
-Write-Host "[3/5] Verificando WiX Toolset v3..." -ForegroundColor Yellow
+Write-Host "[3/6] Verificando WiX Toolset v3..." -ForegroundColor Yellow
 
 if (-not (Test-Path $CandleExe)) {
     Write-Host "      Baixando WiX v3 binarios (~8 MB)..." -ForegroundColor Gray
@@ -82,7 +89,7 @@ if (-not (Test-Path $CandleExe)) {
 }
 
 # --- Step 4: Compile WiX source (.wxs -> .wixobj) ---------------------------
-Write-Host "[4/5] Compilando fonte WiX (.wxs -> .wixobj)..." -ForegroundColor Yellow
+Write-Host "[4/6] Compilando fonte WiX (.wxs -> .wixobj)..." -ForegroundColor Yellow
 
 & $CandleExe -arch x64 -out "$WixObjPath" "$WxsPath" -nologo
 
@@ -93,7 +100,7 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "      OK - .wixobj gerado" -ForegroundColor Green
 
 # --- Step 5: Link and create .msi -------------------------------------------
-Write-Host "[5/5] Gerando instalador .msi (light.exe)..." -ForegroundColor Yellow
+Write-Host "[5/6] Gerando instalador .msi (light.exe)..." -ForegroundColor Yellow
 
 & $LightExe -out "$MsiPath" "$WixObjPath" -ext WixUIExtension -nologo -sice:ICE61
 
@@ -103,6 +110,53 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $MsiMB = [math]::Round((Get-Item $MsiPath).Length / 1MB, 1)
+Write-Host "      OK - $MsiName ($MsiMB MB) gerado" -ForegroundColor Green
+
+# --- Step 6: Sign the .msi with self-signed certificate ----------------------
+Write-Host "[6/6] Assinando o instalador .msi com certificado HT Technology..." -ForegroundColor Yellow
+
+if (-not (Test-Path $SignTool)) {
+    Write-Host "      AVISO: signtool.exe nao encontrado. Pulando assinatura." -ForegroundColor DarkYellow
+    Write-Host "      Instale o Windows SDK 10 para habilitar a assinatura." -ForegroundColor DarkYellow
+} else {
+    # Gera ou reusa o certificado auto-assinado no LocalMachine\My
+    $existingCert = Get-ChildItem $CertStore | Where-Object { $_.Subject -like "*$CertSubj*" } | Select-Object -First 1
+    if (-not $existingCert) {
+        Write-Host "      Gerando certificado auto-assinado HT Technology..." -ForegroundColor Gray
+        $cert = New-SelfSignedCertificate `
+            -Subject           "CN=$CertSubj" `
+            -FriendlyName      "$CertSubj Code Signing" `
+            -Type              CodeSigning `
+            -CertStoreLocation $CertStore `
+            -HashAlgorithm     SHA256 `
+            -NotAfter          (Get-Date).AddYears(10)
+        $secPass = ConvertTo-SecureString -String $PfxPass -Force -AsPlainText
+        Export-PfxCertificate -Cert $cert -FilePath $PfxPath -Password $secPass | Out-Null
+        Write-Host "      Certificado gerado e exportado para installer\HTTechnology.pfx" -ForegroundColor Green
+    } else {
+        Write-Host "      Certificado ja existe no store. Reutilizando." -ForegroundColor Gray
+        if (-not (Test-Path $PfxPath)) {
+            $secPass = ConvertTo-SecureString -String $PfxPass -Force -AsPlainText
+            Export-PfxCertificate -Cert $existingCert -FilePath $PfxPath -Password $secPass | Out-Null
+        }
+    }
+
+    # Assina o MSI com SHA256 (sem /p7 — incompativel com /d)
+    Write-Host "      Assinando $MsiName ..." -ForegroundColor Gray
+    & $SignTool sign `
+        /fd SHA256 `
+        /f  "$PfxPath" `
+        /p  $PfxPass `
+        /d  "Monitor de Recursos" `
+        /du "https://github.com/cloudtiago/windows-monitor-resources" `
+        "$MsiPath"
+
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "      OK - MSI assinado com sucesso (Publisher: HT Technology)" -ForegroundColor Green
+    } else {
+        Write-Host "  AVISO: Falha ao assinar o MSI (nao critico, build continua)." -ForegroundColor DarkYellow
+    }
+}
 
 # --- Summary ----------------------------------------------------------------
 Write-Host ""

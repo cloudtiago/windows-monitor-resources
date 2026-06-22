@@ -12,3 +12,6 @@ tools/
 # WiX intermediate files
 *.wixobj
 *.wixpdb
+
+# Code signing certificate (nunca commitar chaves privadas)
+installer/*.pfx
